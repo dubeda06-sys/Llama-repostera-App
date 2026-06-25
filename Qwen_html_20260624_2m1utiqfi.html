@@ -43,10 +43,12 @@
             display: flex;
             background: #f8f9fa;
             border-bottom: 2px solid #e9ecef;
+            flex-wrap: wrap;
         }
 
         .tab {
             flex: 1;
+            min-width: 120px;
             padding: 20px;
             text-align: center;
             cursor: pointer;
@@ -164,6 +166,11 @@
             margin-bottom: 8px;
         }
 
+        .ingredient-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+
         .price-tag {
             background: #28a745;
             color: white;
@@ -273,6 +280,75 @@
             font-size: 3em;
             margin-bottom: 15px;
         }
+
+        /* Estilos para ingredientes con iconos */
+        .ingredient-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .ingredient-option {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .ingredient-option:hover {
+            border-color: #f5576c;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.2);
+        }
+
+        .ingredient-option.selected {
+            border-color: #f5576c;
+            background: #fff0f3;
+        }
+
+        .ingredient-option .icon {
+            font-size: 40px;
+            margin-bottom: 8px;
+        }
+
+        .ingredient-option .name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .preset-ingredients {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .preset-ingredients h4 {
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .quick-add-btn {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+
+        .quick-add-btn:hover {
+            background: #667eea;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -293,6 +369,33 @@
             <!-- SECCIÓN INSUMOS -->
             <div id="insumos" class="section active">
                 <h2>Base de Datos de Insumos</h2>
+                
+                <div class="preset-ingredients">
+                    <h4>🎯 Agregar Ingredientes Comunes Rápidamente</h4>
+                    <div style="display: flex; flex-wrap: wrap;">
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Harina de Trigo', 'g')">🌾 Harina</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Azúcar Blanca', 'g')">🍬 Azúcar</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Mantequilla', 'g')">🧈 Mantequilla</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Huevos', 'unidad')">🥚 Huevos</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Leche', 'ml')">🥛 Leche</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Cacao en Polvo', 'g')">🍫 Cacao</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Polvo de Hornear', 'g')">🍰 Polvo Hornear</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Vainilla', 'ml')">🌿 Vainilla</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Sal', 'g')">🧂 Sal</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Crema de Leche', 'ml')">🥄 Crema</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Queso Crema', 'g')">🧀 Queso Crema</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Limones', 'unidad')">🍋 Limones</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Naranja', 'unidad')">🍊 Naranja</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Fresas', 'g')">🍓 Fresas</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Chocolate', 'g')">🍫 Chocolate</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Nueces', 'g')">🌰 Nueces</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Almendras', 'g')">🥜 Almendras</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Canela', 'g')">🌿 Canela</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Miel', 'g')">🍯 Miel</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Gelatina', 'g')">🍮 Gelatina</button>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label>Nombre del Insumo</label>
                     <input type="text" id="insumoNombre" placeholder="Ej: Harina, Azúcar, Mantequilla">
@@ -461,6 +564,35 @@
         }
 
         // GESTIÓN DE INSUMOS
+        function agregarInsumoRapido(nombre, unidad) {
+            // Verificar si ya existe
+            if (insumos.find(i => i.nombre.toLowerCase() === nombre.toLowerCase())) {
+                alert('Este insumo ya existe');
+                return;
+            }
+
+            insumos.push({
+                id: Date.now(),
+                nombre: nombre,
+                unidad: unidad
+            });
+
+            saveToStorage('insumos', insumos);
+            actualizarListas();
+            
+            // Feedback visual
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✓ Agregado';
+            btn.style.background = '#28a745';
+            btn.style.color = 'white';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = 'white';
+                btn.style.color = '#667eea';
+            }, 1000);
+        }
+
         function agregarInsumo() {
             const nombre = document.getElementById('insumoNombre').value.trim();
             const unidad = document.getElementById('insumoUnidad').value;
@@ -653,7 +785,8 @@
                 totalPrecio += c.precio;
             });
 
-            return totalCantidad > 0 ? totalPrecio / totalCantidad : 0; // Precio por unidad
+            // Retorna el precio POR UNIDAD (ej: precio por gramo, precio por ml)
+            return totalCantidad > 0 ? totalPrecio / totalCantidad : 0;
         }
         
         // Función para obtener el costo actualizado con método FIFO
@@ -686,6 +819,7 @@
             let costoTotal = 0;
             receta.ingredientes.forEach(ing => {
                 const precioPorUnidad = calcularCostoInsumo(ing.insumoId);
+                // Multiplicar precio por unidad × cantidad usada en la receta
                 costoTotal += precioPorUnidad * ing.cantidad;
             });
             return costoTotal;
@@ -768,6 +902,34 @@
         }
 
         // ACTUALIZAR LISTAS
+        function getIconoParaInsumo(nombre) {
+            const nombreLower = nombre.toLowerCase();
+            if (nombreLower.includes('harina')) return '🌾';
+            if (nombreLower.includes('azúcar') || nombreLower.includes('azucar')) return '🍬';
+            if (nombreLower.includes('mantequilla')) return '🧈';
+            if (nombreLower.includes('huevo')) return '🥚';
+            if (nombreLower.includes('leche')) return '🥛';
+            if (nombreLower.includes('cacao') || nombreLower.includes('chocolate')) return '🍫';
+            if (nombreLower.includes('polvo de hornear') || nombreLower.includes('levadura')) return '🍰';
+            if (nombreLower.includes('vainilla')) return '🌿';
+            if (nombreLower.includes('sal')) return '🧂';
+            if (nombreLower.includes('crema')) return '🥄';
+            if (nombreLower.includes('queso')) return '🧀';
+            if (nombreLower.includes('limon') || nombreLower.includes('limón')) return '🍋';
+            if (nombreLower.includes('naranja')) return '🍊';
+            if (nombreLower.includes('fresa')) return '🍓';
+            if (nombreLower.includes('nuez')) return '🌰';
+            if (nombreLower.includes('almendra')) return '🥜';
+            if (nombreLower.includes('canela')) return '🌿';
+            if (nombreLower.includes('miel')) return '🍯';
+            if (nombreLower.includes('gelatina')) return '🍮';
+            if (nombreLower.includes('menta')) return '🌱';
+            if (nombreLower.includes('cereza')) return '🍒';
+            if (nombreLower.includes('manzana')) return '🍎';
+            if (nombreLower.includes('platano') || nombreLower.includes('plátano') || nombreLower.includes('banana')) return '🍌';
+            return '📦';
+        }
+
         function actualizarListas() {
             // Actualizar lista de insumos
             const listaInsumos = document.getElementById('listaInsumos');
@@ -776,13 +938,17 @@
             } else {
                 listaInsumos.innerHTML = insumos.map(insumo => {
                     const precioActual = calcularCostoInsumo(insumo.id);
+                    const icono = getIconoParaInsumo(insumo.nombre);
                     return `
                         <div class="card">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                    <h3>${insumo.nombre}</h3>
-                                    <p style="color: #6c757d;">Unidad: ${insumo.unidad}</p>
-                                    ${precioActual > 0 ? `<span class="price-tag">Precio actual: $${precioActual.toFixed(2)}/${insumo.unidad}</span>` : ''}
+                                <div style="display: flex; align-items: center;">
+                                    <span style="font-size: 30px; margin-right: 15px;">${icono}</span>
+                                    <div>
+                                        <h3>${insumo.nombre}</h3>
+                                        <p style="color: #6c757d;">Unidad: ${insumo.unidad}</p>
+                                        ${precioActual > 0 ? `<span class="price-tag">Precio actual: $${precioActual.toFixed(2)}/${insumo.unidad}</span>` : '<span style="color: #dc3545; font-size: 12px;">⚠️ Sin compras registradas</span>'}
+                                    </div>
                                 </div>
                                 <button class="btn btn-danger" onclick="eliminarInsumo(${insumo.id})">Eliminar</button>
                             </div>
