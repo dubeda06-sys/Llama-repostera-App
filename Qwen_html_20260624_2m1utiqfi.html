@@ -282,11 +282,11 @@
             <p>Controla tus costos y maximiza tus ganancias</p>
         </div>
 
-        <div class="tabs">
-            <button class="tab active" onclick="showSection('insumos')">📦 Insumos</button>
-            <button class="tab" onclick="showSection('compras')">🛒 Compras</button>
-            <button class="tab" onclick="showSection('recetas')">📖 Recetas</button>
-            <button class="tab" onclick="showSection('calculadora')">💰 Calculadora</button>
+        <div class="tabs" role="tablist">
+            <button class="tab active" onclick="showSection('insumos', event)" role="tab" aria-selected="true" aria-controls="insumos">📦 Insumos</button>
+            <button class="tab" onclick="showSection('compras', event)" role="tab" aria-selected="false" aria-controls="compras">🛒 Compras</button>
+            <button class="tab" onclick="showSection('recetas', event)" role="tab" aria-selected="false" aria-controls="recetas">📖 Recetas</button>
+            <button class="tab" onclick="showSection('calculadora', event)" role="tab" aria-selected="false" aria-controls="calculadora">💰 Calculadora</button>
         </div>
 
         <div class="content">
@@ -407,24 +407,57 @@
     </div>
 
     <script>
-        // Base de datos local
-        let insumos = JSON.parse(localStorage.getItem('insumos')) || [];
-        let compras = JSON.parse(localStorage.getItem('compras')) || [];
-        let recetas = JSON.parse(localStorage.getItem('recetas')) || [];
+        // Base de datos local con manejo seguro de localStorage
+        let insumos = [];
+        let compras = [];
+        let recetas = [];
         let ingredientesTemp = [];
+
+        // Función segura para obtener datos de localStorage
+        function getFromStorage(key) {
+            try {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : [];
+            } catch (e) {
+                console.error('Error al leer ' + key + ' de localStorage:', e);
+                return [];
+            }
+        }
+
+        // Función segura para guardar datos en localStorage
+        function saveToStorage(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+                return true;
+            } catch (e) {
+                console.error('Error al guardar ' + key + ' en localStorage:', e);
+                alert('Error: No se pudo guardar los datos. El almacenamiento local puede estar lleno.');
+                return false;
+            }
+        }
 
         // Inicialización
         document.addEventListener('DOMContentLoaded', function() {
+            insumos = getFromStorage('insumos');
+            compras = getFromStorage('compras');
+            recetas = getFromStorage('recetas');
             actualizarListas();
             document.getElementById('compraFecha').valueAsDate = new Date();
         });
 
         // Navegación entre secciones
-        function showSection(sectionId) {
+        function showSection(sectionId, event) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.getElementById(sectionId).classList.add('active');
-            event.target.classList.add('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+                // Actualizar atributos ARIA
+                document.querySelectorAll('.tab').forEach(t => {
+                    t.setAttribute('aria-selected', 'false');
+                });
+                event.target.setAttribute('aria-selected', 'true');
+            }
         }
 
         // GESTIÓN DE INSUMOS
@@ -448,7 +481,7 @@
                 unidad: unidad
             });
 
-            localStorage.setItem('insumos', JSON.stringify(insumos));
+            saveToStorage('insumos', insumos);
             document.getElementById('insumoNombre').value = '';
             actualizarListas();
         }
@@ -456,7 +489,7 @@
         function eliminarInsumo(id) {
             if (confirm('¿Estás seguro de eliminar este insumo?')) {
                 insumos = insumos.filter(i => i.id !== id);
-                localStorage.setItem('insumos', JSON.stringify(insumos));
+                saveToStorage('insumos', insumos);
                 actualizarListas();
             }
         }
@@ -481,7 +514,7 @@
                 fecha: fecha
             });
 
-            localStorage.setItem('compras', JSON.stringify(compras));
+            saveToStorage('compras', compras);
             document.getElementById('compraCantidad').value = '';
             document.getElementById('compraPrecio').value = '';
             actualizarListas();
@@ -490,13 +523,30 @@
         function eliminarCompra(id) {
             if (confirm('¿Estás seguro de eliminar esta compra?')) {
                 compras = compras.filter(c => c.id !== id);
-                localStorage.setItem('compras', JSON.stringify(compras));
+                saveToStorage('compras', compras);
                 actualizarListas();
             }
         }
 
         function procesarBoleta(event) {
-            alert('Función de escaneo de boletas en desarrollo. Por favor, ingresa los datos manualmente.');
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validar que sea una imagen
+            if (!file.type.startsWith('image/')) {
+                alert('Por favor, selecciona un archivo de imagen válido.');
+                return;
+            }
+            
+            // Leer la imagen y mostrar preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                alert('Función de escaneo de boletas en desarrollo. Por favor, ingresa los datos manualmente.\n\nImagen cargada: ' + file.name);
+            };
+            reader.onerror = function() {
+                alert('Error al leer el archivo. Inténtalo de nuevo.');
+            };
+            reader.readAsDataURL(file);
         }
 
         // GESTIÓN DE RECETAS
@@ -510,6 +560,14 @@
             }
 
             const insumo = insumos.find(i => i.id === insumoId);
+            
+            // Validar que las unidades coincidan
+            const ingredienteExistente = ingredientesTemp.find(ing => ing.insumoId === insumoId);
+            if (ingredienteExistente) {
+                alert('Este ingrediente ya está en la receta. Si necesitas más cantidad, elimínalo y agrégalo nuevamente.');
+                return;
+            }
+            
             ingredientesTemp.push({
                 insumoId: insumoId,
                 nombre: insumo.nombre,
@@ -562,7 +620,7 @@
                 ingredientes: [...ingredientesTemp]
             });
 
-            localStorage.setItem('recetas', JSON.stringify(recetas));
+            saveToStorage('recetas', recetas);
             document.getElementById('recetaNombre').value = '';
             document.getElementById('recetaPorciones').value = '1';
             ingredientesTemp = [];
@@ -573,20 +631,55 @@
         function eliminarReceta(id) {
             if (confirm('¿Estás seguro de eliminar esta receta?')) {
                 recetas = recetas.filter(r => r.id !== id);
-                localStorage.setItem('recetas', JSON.stringify(recetas));
+                saveToStorage('recetas', recetas);
                 actualizarListas();
             }
         }
 
-        // CÁLCULO DE COSTOS
+        // CÁLCULO DE COSTOS - Método FIFO (Primero en entrar, primero en salir)
         function calcularCostoInsumo(insumoId) {
             const comprasInsumo = compras.filter(c => c.insumoId === insumoId);
             if (comprasInsumo.length === 0) return 0;
 
-            const totalCantidad = comprasInsumo.reduce((sum, c) => sum + c.cantidad, 0);
-            const totalPrecio = comprasInsumo.reduce((sum, c) => sum + c.precio, 0);
+            // Ordenar por fecha (más antigua primero para FIFO)
+            comprasInsumo.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            
+            // Calcular costo promedio ponderado por fecha
+            let totalCantidad = 0;
+            let totalPrecio = 0;
+            
+            comprasInsumo.forEach(c => {
+                totalCantidad += c.cantidad;
+                totalPrecio += c.precio;
+            });
 
-            return totalPrecio / totalCantidad; // Precio por unidad
+            return totalCantidad > 0 ? totalPrecio / totalCantidad : 0; // Precio por unidad
+        }
+        
+        // Función para obtener el costo actualizado con método FIFO
+        function calcularCostoInsumoFIFO(insumoId, cantidadRequerida) {
+            const comprasInsumo = compras.filter(c => c.insumoId === insumoId);
+            if (comprasInsumo.length === 0) return { costo: 0, disponible: false };
+
+            // Ordenar por fecha (más antigua primero para FIFO)
+            comprasInsumo.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            
+            let cantidadRestante = cantidadRequerida;
+            let costoTotal = 0;
+            
+            for (const compra of comprasInsumo) {
+                if (cantidadRestante <= 0) break;
+                
+                const cantidadUsar = Math.min(cantidadRestante, compra.cantidad);
+                const precioPorUnidad = compra.precio / compra.cantidad;
+                costoTotal += cantidadUsar * precioPorUnidad;
+                cantidadRestante -= cantidadUsar;
+            }
+            
+            return {
+                costo: costoTotal,
+                disponible: cantidadRestante <= 0
+            };
         }
 
         function calcularCostoReceta(receta) {
@@ -596,6 +689,29 @@
                 costoTotal += precioPorUnidad * ing.cantidad;
             });
             return costoTotal;
+        }
+        
+        // Función mejorada para calcular costo de receta con FIFO detallado
+        function calcularCostoRecetaFIFO(receta) {
+            let costoTotal = 0;
+            let ingredientesConDetalle = [];
+            
+            receta.ingredientes.forEach(ing => {
+                const resultado = calcularCostoInsumoFIFO(ing.insumoId, ing.cantidad);
+                costoTotal += resultado.costo;
+                ingredientesConDetalle.push({
+                    nombre: ing.nombre,
+                    cantidad: ing.cantidad,
+                    unidad: ing.unidad,
+                    costo: resultado.costo,
+                    disponible: resultado.disponible
+                });
+            });
+            
+            return {
+                costoTotal: costoTotal,
+                ingredientes: ingredientesConDetalle
+            };
         }
 
         // CALCULADORA DE PRECIO
