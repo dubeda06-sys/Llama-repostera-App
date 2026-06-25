@@ -1,12 +1,4 @@
 ```
-# Web browser cache and temporary files
-*.html.*
-
-# Logs and temp files
-*.tmp
-*.log
-
-# Environment variables
-.env
-.env.*
+# HTML files
+*.html
 ```

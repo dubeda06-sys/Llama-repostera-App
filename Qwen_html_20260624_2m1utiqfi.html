@@ -333,6 +333,59 @@
             color: #495057;
         }
 
+        .ingredient-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .ingredient-item-preset {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .ingredient-item-preset:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .ingredient-item-preset.added {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .ingredient-item-preset .icon {
+            font-size: 32px;
+            margin-right: 12px;
+        }
+
+        .ingredient-item-preset .name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #495057;
+            flex: 1;
+        }
+
+        .ingredient-item-preset .check-mark {
+            font-size: 20px;
+            color: #28a745;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .ingredient-item-preset.added .check-mark {
+            opacity: 1;
+        }
+
         .quick-add-btn {
             background: white;
             border: 2px solid #667eea;
@@ -371,29 +424,8 @@
                 <h2>Base de Datos de Insumos</h2>
                 
                 <div class="preset-ingredients">
-                    <h4>🎯 Agregar Ingredientes Comunes Rápidamente</h4>
-                    <div style="display: flex; flex-wrap: wrap;">
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Harina de Trigo', 'g')">🌾 Harina</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Azúcar Blanca', 'g')">🍬 Azúcar</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Mantequilla', 'g')">🧈 Mantequilla</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Huevos', 'unidad')">🥚 Huevos</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Leche', 'ml')">🥛 Leche</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Cacao en Polvo', 'g')">🍫 Cacao</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Polvo de Hornear', 'g')">🍰 Polvo Hornear</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Vainilla', 'ml')">🌿 Vainilla</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Sal', 'g')">🧂 Sal</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Crema de Leche', 'ml')">🥄 Crema</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Queso Crema', 'g')">🧀 Queso Crema</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Limones', 'unidad')">🍋 Limones</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Naranja', 'unidad')">🍊 Naranja</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Fresas', 'g')">🍓 Fresas</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Chocolate', 'g')">🍫 Chocolate</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Nueces', 'g')">🌰 Nueces</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Almendras', 'g')">🥜 Almendras</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Canela', 'g')">🌿 Canela</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Miel', 'g')">🍯 Miel</button>
-                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Gelatina', 'g')">🍮 Gelatina</button>
-                    </div>
+                    <h4>🎯 Ingredientes Comunes de Repostería (Click para agregar)</h4>
+                    <div id="ingredientListPreset" class="ingredient-list"></div>
                 </div>
 
                 <div class="form-group">
@@ -545,6 +577,7 @@
             compras = getFromStorage('compras');
             recetas = getFromStorage('recetas');
             actualizarListas();
+            renderIngredientesPreset(); // Renderizar la lista de ingredientes preset
             document.getElementById('compraFecha').valueAsDate = new Date();
         });
 
@@ -564,6 +597,64 @@
         }
 
         // GESTIÓN DE INSUMOS
+        // Lista de ingredientes predefinidos con iconos
+        const ingredientesPreset = [
+            { nombre: 'Harina de Trigo', unidad: 'g', icono: '🌾' },
+            { nombre: 'Azúcar Blanca', unidad: 'g', icono: '🍬' },
+            { nombre: 'Mantequilla', unidad: 'g', icono: '🧈' },
+            { nombre: 'Huevos', unidad: 'unidad', icono: '🥚' },
+            { nombre: 'Leche', unidad: 'ml', icono: '🥛' },
+            { nombre: 'Cacao en Polvo', unidad: 'g', icono: '🍫' },
+            { nombre: 'Polvo de Hornear', unidad: 'g', icono: '🍰' },
+            { nombre: 'Vainilla', unidad: 'ml', icono: '🌿' },
+            { nombre: 'Sal', unidad: 'g', icono: '🧂' },
+            { nombre: 'Crema de Leche', unidad: 'ml', icono: '🥄' },
+            { nombre: 'Queso Crema', unidad: 'g', icono: '🧀' },
+            { nombre: 'Limones', unidad: 'unidad', icono: '🍋' },
+            { nombre: 'Naranja', unidad: 'unidad', icono: '🍊' },
+            { nombre: 'Fresas', unidad: 'g', icono: '🍓' },
+            { nombre: 'Chocolate', unidad: 'g', icono: '🍫' },
+            { nombre: 'Nueces', unidad: 'g', icono: '🌰' },
+            { nombre: 'Almendras', unidad: 'g', icono: '🥜' },
+            { nombre: 'Canela', unidad: 'g', icono: '🌿' },
+            { nombre: 'Miel', unidad: 'g', icono: '🍯' },
+            { nombre: 'Gelatina', unidad: 'g', icono: '🍮' }
+        ];
+
+        // Renderizar lista de ingredientes preset
+        function renderIngredientesPreset() {
+            const container = document.getElementById('ingredientListPreset');
+            if (!container) return;
+
+            container.innerHTML = ingredientesPreset.map(ing => {
+                const yaAgregado = insumos.some(i => i.nombre.toLowerCase() === ing.nombre.toLowerCase());
+                return `
+                    <div class="ingredient-item-preset ${yaAgregado ? 'added' : ''}" onclick="agregarInsumoDesdePreset('${ing.nombre}', '${ing.unidad}')">
+                        <span class="icon">${ing.icono}</span>
+                        <span class="name">${ing.nombre}</span>
+                        <span class="check-mark">✓</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function agregarInsumoDesdePreset(nombre, unidad) {
+            // Verificar si ya existe
+            if (insumos.find(i => i.nombre.toLowerCase() === nombre.toLowerCase())) {
+                return; // Ya existe, no hacer nada
+            }
+
+            insumos.push({
+                id: Date.now(),
+                nombre: nombre,
+                unidad: unidad
+            });
+
+            saveToStorage('insumos', insumos);
+            actualizarListas();
+            renderIngredientesPreset(); // Re-render para mostrar el check
+        }
+
         function agregarInsumoRapido(nombre, unidad) {
             // Verificar si ya existe
             if (insumos.find(i => i.nombre.toLowerCase() === nombre.toLowerCase())) {
