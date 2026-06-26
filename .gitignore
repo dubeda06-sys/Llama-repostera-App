@@ -1,12 +1,32 @@
 ```
-# Web browser cache and temporary files
-*.html.*
+# Dependencies
+node_modules/
 
-# Logs and temp files
-*.tmp
+# Environment
+.env
+.env.local
+.env.*
+
+# Build artifacts
+dist/
+build/
+target/
+
+# Logs
 *.log
 
-# Environment variables
-.env
-.env.*
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
 ```
