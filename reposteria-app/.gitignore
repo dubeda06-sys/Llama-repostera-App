@@ -1,0 +1,33 @@
+# Dependencias de Node.js
+node_modules/
+
+# Archivos de entorno y configuración local
+.env
+.env.local
+.env.*.local
+
+# Base de datos JSON (puede contener datos sensibles)
+db.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Archivos temporales del sistema operativo
+.DS_Store
+Thumbs.db
+
+# IDE y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Caché de npm
+.npm/
+
+# Directorio de build si se genera
+dist/
+build/

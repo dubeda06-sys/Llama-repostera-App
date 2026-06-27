@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             border-radius: 20px;
@@ -37,6 +37,70 @@
         .header h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
+        }
+
+        /* Cards Grid Layout */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 30px;
+        }
+
+        .card-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+            min-height: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .card-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card-section.insumos {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .card-section.recetas {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .card-section.compras {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .card-section.calculadora {
+            background: linear-gradient(135deg, #fceabb 0%, #f8b500 100%);
+            color: white;
+        }
+
+        .card-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .card-description {
+            font-size: 1em;
+            opacity: 0.9;
         }
 
         .tabs {
@@ -324,7 +388,31 @@
             <p>Controla tus costos y maximiza tus ganancias</p>
         </div>
 
-        <div class="tabs" role="tablist">
+        <!-- Cards Grid -->
+        <div class="cards-grid">
+            <div class="card-section insumos" onclick="showSection('insumos')">
+                <div class="card-icon">📦</div>
+                <div class="card-title">Insumos</div>
+                <div class="card-description">Gestiona tu inventario de ingredientes</div>
+            </div>
+            <div class="card-section recetas" onclick="showSection('recetas')">
+                <div class="card-icon">📖</div>
+                <div class="card-title">Recetas</div>
+                <div class="card-description">Crea y administra tus recetas</div>
+            </div>
+            <div class="card-section compras" onclick="showSection('compras')">
+                <div class="card-icon">🛒</div>
+                <div class="card-title">Compras</div>
+                <div class="card-description">Registra y controla tus compras</div>
+            </div>
+            <div class="card-section calculadora" onclick="showSection('calculadora')">
+                <div class="card-icon">💰</div>
+                <div class="card-title">Calculadora</div>
+                <div class="card-description">Calcula precios y ganancias</div>
+            </div>
+        </div>
+
+        <div class="tabs" role="tablist" style="display: none;">
             <button class="tab active" onclick="showSection('insumos', event)" role="tab" aria-selected="true" aria-controls="insumos">📦 Insumos</button>
             <button class="tab" onclick="showSection('compras', event)" role="tab" aria-selected="false" aria-controls="compras">🛒 Compras</button>
             <button class="tab" onclick="showSection('recetas', event)" role="tab" aria-selected="false" aria-controls="recetas">📖 Recetas</button>
@@ -552,6 +640,12 @@
 
         // Navegación entre secciones
         function showSection(sectionId, event) {
+            // Ocultar cards grid cuando se selecciona una sección
+            const cardsGrid = document.querySelector('.cards-grid');
+            if (sectionId && cardsGrid) {
+                cardsGrid.style.display = 'none';
+            }
+            
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.getElementById(sectionId).classList.add('active');
@@ -562,6 +656,15 @@
                 });
                 event.target.setAttribute('aria-selected', 'true');
             }
+        }
+        
+        // Función para volver al inicio (mostrar cards)
+        function showHome() {
+            const cardsGrid = document.querySelector('.cards-grid');
+            if (cardsGrid) {
+                cardsGrid.style.display = 'grid';
+            }
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         }
 
         // GESTIÓN DE INSUMOS
@@ -967,6 +1070,25 @@
             document.getElementById('compraFecha').valueAsDate = new Date();
             actualizarListas();
         });
+
+        // Agregar botón de volver al inicio en cada sección
+        function agregarBotonVolver() {
+            const secciones = ['insumos', 'compras', 'recetas', 'calculadora'];
+            secciones.forEach(seccion => {
+                const el = document.getElementById(seccion);
+                if (el && !el.querySelector('.btn-volver')) {
+                    const btnVolver = document.createElement('button');
+                    btnVolver.className = 'btn btn-primary btn-volver';
+                    btnVolver.textContent = '⬅ Volver al Inicio';
+                    btnVolver.style.marginBottom = '20px';
+                    btnVolver.onclick = showHome;
+                    el.insertBefore(btnVolver, el.firstChild);
+                }
+            });
+        }
+        
+        // Llamar a la función después de DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', agregarBotonVolver);
     </script>
 </body>
 </html>

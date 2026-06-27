@@ -41,7 +41,7 @@ echo.
 REM Abrir navegador automáticamente
 start http://localhost:3000
 
-REM Iniciar el servidor
-call npm start
+REM Iniciar el servidor con nodemon para recarga automática
+call npm run dev
 
 pause
