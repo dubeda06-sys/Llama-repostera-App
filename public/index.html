@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Repostería</title>
+        <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="config-btn" onclick="openSection('configuracion')" title="Configuración" aria-label="Configuración">⚙️</button>
+            <h1>🧁 Gestor de Repostería</h1>
+            <p>Controla tus costos y maximiza tus ganancias</p>
+            <button class="back-btn" id="backBtn" onclick="goBack()" aria-label="Volver al inicio">← Volver</button>
+        </div>
+
+        <!-- Dashboard: 4 nav cards -->
+        <div id="dashboard">
+            <div class="nav-card" onclick="openSection('insumos')">
+                <div class="nc-icon">📦</div>
+                <div class="nc-count" id="countInsumos">0</div>
+                <div class="nc-title">Insumos</div>
+                <div class="nc-sub">ingredientes</div>
+            </div>
+            <div class="nav-card" onclick="openSection('compras')">
+                <div class="nc-icon">🛒</div>
+                <div class="nc-count" id="countCompras">0</div>
+                <div class="nc-title">Compras</div>
+                <div class="nc-sub">registros</div>
+            </div>
+            <div class="nav-card" onclick="openSection('recetas')">
+                <div class="nc-icon">📖</div>
+                <div class="nc-count" id="countRecetas">0</div>
+                <div class="nc-title">Recetas</div>
+                <div class="nc-sub">guardadas</div>
+            </div>
+            <div class="nav-card" onclick="openSection('calculadora')">
+                <div class="nc-icon">💰</div>
+                <div class="nc-count">→</div>
+                <div class="nc-title">Calculadora</div>
+                <div class="nc-sub">precio de venta</div>
+            </div>
+        </div>
+
+        <!-- Sections -->
+        <div class="content" id="sectionsWrapper">
+
+            <!-- INSUMOS -->
+            <div id="insumos" class="section">
+                <div class="section-title">📦 Insumos</div>
+
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" id="buscarInsumo"
+                        placeholder="Buscar ingrediente para agregar rápido..."
+                        oninput="filtrarSugeridos(this.value)"
+                        onfocus="mostrarSugeridos()"
+                        autocomplete="off">
+                    <div class="sugeridos-dropdown" id="sugeridosDropdown"></div>
+                </div>
+
+                <div class="grid-insumos">
+                    <div>
+                        <label>Nombre del insumo</label>
+                        <input type="text" id="insumoNombre" placeholder="Ej: Harina, Azúcar..." oninput="autoCodigo()">
+                    </div>
+                    <div>
+                        <label>Código interno</label>
+                        <input type="text" id="insumoCodigo" placeholder="HAR-01" maxlength="12">
+                    </div>
+                    <div>
+                        <label>Código de barras (opcional)</label>
+                        <input type="text" id="insumoBarras" placeholder="7501055300007" maxlength="20">
+                    </div>
+                    <div style="padding-bottom:1px">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary" onclick="agregarInsumo()">+ Agregar</button>
+                    </div>
+                </div>
+
+                <!-- Módulo códigos de barra -->
+                <div class="barras-module">
+                    <div class="barras-header" onclick="toggleBarras()">
+                        <span>🔖 Códigos de barra</span>
+                        <span id="barrasChevron" style="transition:transform .2s;">▼</span>
+                    </div>
+                    <div class="barras-body" id="barrasBody">
+                        <p style="font-size:13px; color:#6c757d; margin-bottom:14px;">
+                            Liga uno o varios códigos de barra a cada producto. Distintas marcas o presentaciones del mismo insumo pueden tener códigos diferentes.
+                        </p>
+
+                        <div class="grid-barras-mod">
+                            <div>
+                                <label>Código de barras</label>
+                                <input type="text" id="barrasCodigo" placeholder="Escanea o escribe…" maxlength="20"
+                                    oninput="lookupBarras(this.value)" autocomplete="off">
+                            </div>
+                            <div>
+                                <label>Producto</label>
+                                <select id="barrasInsumo"><option value="">Selecciona un insumo</option></select>
+                            </div>
+                            <div style="padding-bottom:1px">
+                                <label>&nbsp;</label>
+                                <button class="btn btn-primary" onclick="ligarBarras()">🔗 Ligar</button>
+                            </div>
+                        </div>
+                        <div id="barrasLookup" style="min-height:20px; font-size:13px; margin-bottom:14px;"></div>
+
+                        <div id="listaBarras"></div>
+                    </div>
+                </div>
+
+                <div id="listaInsumos"><div class="spinner"></div></div>
+            </div>
+
+            <!-- COMPRAS -->
+            <div id="compras" class="section">
+                <div class="section-title">🛒 Compras</div>
+
+                <div class="scanner-area">
+                    <p style="margin-bottom:12px; color:#6c757d; font-size:14px;">Escanea tu boleta o ingresa manualmente</p>
+                    <label for="boletaFile" class="scanner-label">📷 Escanear Boleta</label>
+                    <input type="file" id="boletaFile" accept="image/*" onchange="procesarBoleta(event)">
+                    <p style="margin-top:8px; font-size:12px; color:#adb5bd;">Función en desarrollo</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Insumo</label>
+                    <select id="compraInsumo"><option value="">Selecciona un insumo</option></select>
+                </div>
+                <div class="grid-compras">
+                    <div>
+                        <label>Cantidad</label>
+                        <input type="number" id="compraCantidad" placeholder="1000" step="0.01">
+                    </div>
+                    <div>
+                        <label>Unidad</label>
+                        <select id="compraUnidad">
+                            <option value="g">g</option>
+                            <option value="kg">kg</option>
+                            <option value="ml">ml</option>
+                            <option value="l">l</option>
+                            <option value="unidad">unidad</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Precio total</label>
+                        <input type="number" id="compraPrecio" placeholder="2500" step="0.01">
+                    </div>
+                    <div>
+                        <label>Fecha</label>
+                        <input type="date" id="compraFecha">
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="agregarCompra()">Registrar Compra</button>
+
+                <div id="listaCompras"><div class="spinner"></div></div>
+            </div>
+
+            <!-- RECETAS -->
+            <div id="recetas" class="section">
+                <div class="section-title">📖 Recetas</div>
+
+                <!-- Importador de recetas -->
+                <div class="barras-module">
+                    <div class="barras-header" onclick="toggleImport()">
+                        <span>📋 Importar receta desde texto</span>
+                        <span id="importChevron" style="transition:transform .2s;">▼</span>
+                    </div>
+                    <div class="barras-body" id="importBody">
+                        <p style="font-size:13px; color:#6c757d; margin-bottom:12px;">
+                            Pega la receta de un video o web (lista de ingredientes). La app interpreta cantidades y unidades,
+                            las cruza con tus insumos y te deja revisar antes de cargar.
+                        </p>
+                        <textarea id="importTexto" rows="8" placeholder="Ej:&#10;Pie de limón (8 porciones)&#10;200 g de harina&#10;3 huevos&#10;1 taza de azúcar&#10;100 ml de leche&#10;2 cucharadas de mantequilla"
+                            style="width:100%; padding:12px 14px; border:2px solid #e9ecef; border-radius:10px; font-size:14px; font-family:inherit; resize:vertical;"></textarea>
+                        <div style="margin-top:10px;">
+                            <button class="btn btn-primary" onclick="interpretarReceta()">🔍 Interpretar</button>
+                            <button class="btn btn-edit btn-sm" onclick="limpiarImport()">Limpiar</button>
+                        </div>
+                        <div id="importPreview" style="margin-top:16px;"></div>
+                    </div>
+                </div>
+
+                <div class="grid-receta-top">
+                    <div>
+                        <label>Nombre de la receta</label>
+                        <input type="text" id="recetaNombre" placeholder="Ej: Pie de Limón">
+                    </div>
+                    <div>
+                        <label>Porciones</label>
+                        <input type="number" id="recetaPorciones" value="1" style="width:100px;">
+                    </div>
+                </div>
+
+                <h3 style="margin-bottom:12px; font-size:14px; color:#495057;">Ingredientes</h3>
+                <div id="ingredientesReceta"></div>
+
+                <div style="background:#f8f9fa; padding:16px; border-radius:12px; margin-bottom:16px;">
+                    <div class="grid-ingrediente">
+                        <div>
+                            <label>Insumo</label>
+                            <select id="ingredienteInsumo" onchange="actualizarUnidadIngrediente()"><option value="">Selecciona</option></select>
+                        </div>
+                        <div>
+                            <label>Cantidad</label>
+                            <input type="number" id="ingredienteCantidad" placeholder="200" step="0.01" style="width:100px;">
+                        </div>
+                        <div>
+                            <label>Unidad</label>
+                            <select id="ingredienteUnidad" style="width:90px;"></select>
+                        </div>
+                        <div>
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary" onclick="agregarIngrediente()">+ Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-success" onclick="guardarReceta()">Guardar Receta</button>
+
+                <div id="listaRecetas" style="margin-top:24px;"><div class="spinner"></div></div>
+            </div>
+
+            <!-- CALCULADORA -->
+            <div id="calculadora" class="section">
+                <div class="section-title">💰 Calculadora de Precio</div>
+
+                <div class="form-group">
+                    <label>Receta</label>
+                    <select id="calcReceta" onchange="abrirRecetaEnCalc()">
+                        <option value="">Selecciona una receta</option>
+                    </select>
+                </div>
+
+                <div id="calcInputs" style="display:none;">
+                    <div style="background:#f8f9fa; padding:18px; border-radius:14px; margin-bottom:16px;">
+                        <h4 style="margin-bottom:14px; color:#495057;">Costos de esta receta</h4>
+                        <div class="grid-config-2">
+                            <div>
+                                <label>Horas de trabajo</label>
+                                <input type="number" id="calcHoras" placeholder="0" step="0.25" min="0" oninput="calcularPrecio()">
+                            </div>
+                            <div>
+                                <label>Empaque ($ por receta)</label>
+                                <input type="number" id="calcEmpaque" placeholder="0" step="0.01" min="0" oninput="calcularPrecio()">
+                            </div>
+                            <div>
+                                <label>Indirectos gas/luz/agua ($)</label>
+                                <input type="number" id="calcIndirectos" placeholder="0" step="0.01" min="0" oninput="calcularPrecio()">
+                            </div>
+                            <div>
+                                <label>Merma / desperdicio (%)</label>
+                                <input type="number" id="calcMerma" placeholder="0" step="0.5" min="0" oninput="calcularPrecio()">
+                            </div>
+                            <div>
+                                <label>Margen de ganancia (%)</label>
+                                <input type="number" id="calcMargen" placeholder="0" step="1" min="0" oninput="calcularPrecio()">
+                            </div>
+                            <div>
+                                <label>Precio competencia (opcional)</label>
+                                <input type="number" id="calcCompetencia" placeholder="—" step="0.01" min="0" oninput="calcularPrecio()">
+                            </div>
+                        </div>
+                        <p style="font-size:12px; color:#adb5bd; margin-top:10px;">Tarifa por hora se toma de ⚙️ Configuración. Estos valores arrancan con tus defaults; puedes guardarlos en la receta.</p>
+                        <button class="btn btn-success btn-sm" style="margin-top:10px;" onclick="guardarCostosReceta()">💾 Guardar costos en receta</button>
+                        <span id="calcGuardadoMsg" style="color:#28a745; font-size:13px; margin-left:10px; display:none;">✓ Guardado</span>
+                    </div>
+                </div>
+
+                <div id="resultadoCalculo"></div>
+            </div>
+
+            <!-- CONFIGURACIÓN -->
+            <div id="configuracion" class="section">
+                <div class="section-title">⚙️ Configuración</div>
+
+                <div class="config-group">
+                    <h4>💱 Moneda</h4>
+                    <div class="form-group">
+                        <label>Símbolo de moneda</label>
+                        <input type="text" id="configMoneda" maxlength="4" placeholder="$ € S/ ₡" style="max-width:120px;">
+                    </div>
+                </div>
+
+                <div class="config-group">
+                    <h4>🧮 Costos por defecto</h4>
+                    <p style="font-size:13px; color:#6c757d; margin-bottom:14px;">Valores que la calculadora usa al abrir una receta nueva. Pondera tus gastos aquí.</p>
+                    <div class="grid-config-2">
+                        <div>
+                            <label>Tarifa mano de obra ($ / hora)</label>
+                            <input type="number" id="configTarifaHora" placeholder="0" step="0.01" min="0">
+                        </div>
+                        <div>
+                            <label>Empaque por defecto ($)</label>
+                            <input type="number" id="configEmpaque" placeholder="0" step="0.01" min="0">
+                        </div>
+                        <div>
+                            <label>Indirectos por defecto ($)</label>
+                            <input type="number" id="configIndirectos" placeholder="0" step="0.01" min="0">
+                        </div>
+                        <div>
+                            <label>Merma por defecto (%)</label>
+                            <input type="number" id="configMerma" placeholder="0" step="0.5" min="0">
+                        </div>
+                        <div>
+                            <label>Margen por defecto (%)</label>
+                            <input type="number" id="configMargen" placeholder="50" step="1" min="0">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="guardarConfig()">Guardar configuración</button>
+                <p id="configMsg" style="color:#28a745; margin-top:10px; display:none; font-size:14px;">✓ Guardado</p>
+            </div>
+
+        </div><!-- /content -->
+    </div><!-- /container -->
+
+    <div id="toastHost"></div>
+
+    <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-card">
+            <h3 id="modalTitle">⚠️ Confirmar acción</h3>
+            <p id="modalMsg"></p>
+            <div class="modal-btns">
+                <button class="modal-btn-cancel" id="modalCancel">Cancelar</button>
+                <button class="modal-btn-confirm" id="modalConfirm">🗑️ Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+        <script type="module" src="js/app.js"></script>
+</body>
+</html>

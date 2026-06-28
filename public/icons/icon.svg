@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f093fb"/>
+      <stop offset="100%" style="stop-color:#f5576c"/>
+    </linearGradient>
+    <linearGradient id="cake" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+  </defs>
+  <!-- Fondo -->
+  <rect width="512" height="512" rx="100" fill="url(#bg)"/>
+  <!-- Base del cupcake -->
+  <path d="M156 310 L180 420 L332 420 L356 310 Z" fill="url(#cake)" rx="10"/>
+  <!-- Líneas decorativas del wrapper -->
+  <line x1="200" y1="310" x2="192" y2="420" stroke="white" stroke-width="3" stroke-opacity="0.3"/>
+  <line x1="256" y1="310" x2="256" y2="420" stroke="white" stroke-width="3" stroke-opacity="0.3"/>
+  <line x1="312" y1="310" x2="320" y2="420" stroke="white" stroke-width="3" stroke-opacity="0.3"/>
+  <!-- Crema (frosting) -->
+  <ellipse cx="256" cy="270" rx="110" ry="60" fill="white"/>
+  <path d="M146 270 Q180 180 220 200 Q240 140 256 150 Q272 140 292 200 Q330 180 366 270 Z" fill="white"/>
+  <!-- Swirl de crema -->
+  <path d="M256 155 Q270 170 256 185 Q242 200 256 215" stroke="#f5576c" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <!-- Cereza encima -->
+  <circle cx="256" cy="148" r="22" fill="#e74c3c"/>
+  <path d="M256 126 Q270 100 290 95" stroke="#27ae60" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- Puntos decorativos en la crema -->
+  <circle cx="200" cy="255" r="8" fill="#f5576c" opacity="0.6"/>
+  <circle cx="230" cy="240" r="6" fill="#667eea" opacity="0.6"/>
+  <circle cx="282" cy="240" r="6" fill="#667eea" opacity="0.6"/>
+  <circle cx="312" cy="255" r="8" fill="#f5576c" opacity="0.6"/>
+</svg>

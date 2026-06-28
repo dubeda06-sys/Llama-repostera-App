@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head><title>Generar íconos PWA</title></head>
+<body>
+<h2>Generador de íconos PWA</h2>
+<p>Haz clic en cada botón para descargar el ícono correspondiente.</p>
+<canvas id="c" style="border:1px solid #ccc; margin:10px;"></canvas>
+<br>
+<button onclick="generar(192)">Descargar icon-192.png</button>
+<button onclick="generar(512)">Descargar icon-512.png</button>
+
+<script>
+function generar(size) {
+  const canvas = document.getElementById('c');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  // Fondo gradiente
+  const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+  bgGrad.addColorStop(0, '#f093fb');
+  bgGrad.addColorStop(1, '#f5576c');
+  const r = size * 0.2;
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(size - r, 0);
+  ctx.quadraticCurveTo(size, 0, size, r);
+  ctx.lineTo(size, size - r);
+  ctx.quadraticCurveTo(size, size, size - r, size);
+  ctx.lineTo(r, size);
+  ctx.quadraticCurveTo(0, size, 0, size - r);
+  ctx.lineTo(0, r);
+  ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.closePath();
+  ctx.fillStyle = bgGrad;
+  ctx.fill();
+
+  const cx = size / 2;
+  const s = size / 512;
+
+  // Base del cupcake
+  const cakeGrad = ctx.createLinearGradient(0, 0, size, size);
+  cakeGrad.addColorStop(0, '#667eea');
+  cakeGrad.addColorStop(1, '#764ba2');
+  ctx.beginPath();
+  ctx.moveTo(156*s, 310*s);
+  ctx.lineTo(180*s, 420*s);
+  ctx.lineTo(332*s, 420*s);
+  ctx.lineTo(356*s, 310*s);
+  ctx.closePath();
+  ctx.fillStyle = cakeGrad;
+  ctx.fill();
+
+  // Crema
+  ctx.beginPath();
+  ctx.ellipse(256*s, 270*s, 110*s, 60*s, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'white';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(146*s, 270*s);
+  ctx.quadraticCurveTo(180*s, 180*s, 220*s, 200*s);
+  ctx.quadraticCurveTo(240*s, 140*s, 256*s, 150*s);
+  ctx.quadraticCurveTo(272*s, 140*s, 292*s, 200*s);
+  ctx.quadraticCurveTo(330*s, 180*s, 366*s, 270*s);
+  ctx.closePath();
+  ctx.fillStyle = 'white';
+  ctx.fill();
+
+  // Cereza
+  ctx.beginPath();
+  ctx.arc(256*s, 148*s, 22*s, 0, Math.PI*2);
+  ctx.fillStyle = '#e74c3c';
+  ctx.fill();
+
+  // Tallo cereza
+  ctx.beginPath();
+  ctx.moveTo(256*s, 126*s);
+  ctx.quadraticCurveTo(270*s, 100*s, 290*s, 95*s);
+  ctx.strokeStyle = '#27ae60';
+  ctx.lineWidth = 5*s;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Puntos decorativos
+  [[200,255,'#f5576c',8],[230,240,'#667eea',6],[282,240,'#667eea',6],[312,255,'#f5576c',8]].forEach(([x,y,c,rad]) => {
+    ctx.beginPath();
+    ctx.arc(x*s, y*s, rad*s, 0, Math.PI*2);
+    ctx.fillStyle = c;
+    ctx.globalAlpha = 0.7;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  });
+
+  // Descargar
+  const link = document.createElement('a');
+  link.download = `icon-${size}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+</script>
+</body>
+</html>
