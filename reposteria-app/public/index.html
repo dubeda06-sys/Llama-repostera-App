@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Repostería</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            flex: 1;
+            min-width: 120px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            background: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #6c757d;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab.active {
+            background: white;
+            color: #f5576c;
+            border-bottom: 3px solid #f5576c;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #f5576c;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #f5576c;
+        }
+
+        .card h3 {
+            color: #495057;
+            margin-bottom: 10px;
+        }
+
+        .ingredient-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .ingredient-icon {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+
+        .price-tag {
+            background: #28a745;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .cost-summary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .cost-summary h3 {
+            margin-bottom: 15px;
+        }
+
+        .cost-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .total-cost {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 2px solid white;
+        }
+
+        .scanner-area {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+        }
+
+        .scanner-area input[type="file"] {
+            display: none;
+        }
+
+        .scanner-label {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .scanner-label:hover {
+            transform: scale(1.05);
+        }
+
+        .profit-calculator {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .profit-result {
+            background: #28a745;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .preset-ingredients {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .preset-ingredients h4 {
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .quick-add-btn {
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+
+        .quick-add-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧁 Gestor de Repostería</h1>
+            <p>Controla tus costos y maximiza tus ganancias</p>
+        </div>
+
+        <div class="tabs" role="tablist">
+            <button class="tab active" onclick="showSection('insumos', event)" role="tab" aria-selected="true" aria-controls="insumos">📦 Insumos</button>
+            <button class="tab" onclick="showSection('compras', event)" role="tab" aria-selected="false" aria-controls="compras">🛒 Compras</button>
+            <button class="tab" onclick="showSection('recetas', event)" role="tab" aria-selected="false" aria-controls="recetas">📖 Recetas</button>
+            <button class="tab" onclick="showSection('calculadora', event)" role="tab" aria-selected="false" aria-controls="calculadora">💰 Calculadora</button>
+        </div>
+
+        <div class="content">
+            <!-- SECCIÓN INSUMOS -->
+            <div id="insumos" class="section active">
+                <h2>Base de Datos de Insumos</h2>
+                
+                <div class="preset-ingredients">
+                    <h4>🎯 Agregar Ingredientes Comunes Rápidamente</h4>
+                    <div style="display: flex; flex-wrap: wrap;">
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Harina de Trigo', 'g')">🌾 Harina</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Azúcar Blanca', 'g')">🍬 Azúcar</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Mantequilla', 'g')">🧈 Mantequilla</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Huevos', 'unidad')">🥚 Huevos</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Leche', 'ml')">🥛 Leche</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Cacao en Polvo', 'g')">🍫 Cacao</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Polvo de Hornear', 'g')">🍰 Polvo Hornear</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Vainilla', 'ml')">🌿 Vainilla</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Sal', 'g')">🧂 Sal</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Crema de Leche', 'ml')">🥄 Crema</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Queso Crema', 'g')">🧀 Queso Crema</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Limones', 'unidad')">🍋 Limones</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Naranja', 'unidad')">🍊 Naranja</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Fresas', 'g')">🍓 Fresas</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Chocolate', 'g')">🍫 Chocolate</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Nueces', 'g')">🌰 Nueces</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Almendras', 'g')">🥜 Almendras</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Canela', 'g')">🌿 Canela</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Miel', 'g')">🍯 Miel</button>
+                        <button class="quick-add-btn" onclick="agregarInsumoRapido('Gelatina', 'g')">🍮 Gelatina</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Nombre del Insumo</label>
+                    <input type="text" id="insumoNombre" placeholder="Ej: Harina, Azúcar, Mantequilla">
+                </div>
+                <div class="form-group">
+                    <label>Unidad de Medida</label>
+                    <select id="insumoUnidad">
+                        <option value="g">Gramos (g)</option>
+                        <option value="kg">Kilogramos (kg)</option>
+                        <option value="ml">Mililitros (ml)</option>
+                        <option value="l">Litros (l)</option>
+                        <option value="unidad">Unidad</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="agregarInsumo()">Agregar Insumo</button>
+
+                <div id="listaInsumos"><div class="loading">Cargando insumos...</div></div>
+            </div>
+
+            <!-- SECCIÓN COMPRAS -->
+            <div id="compras" class="section">
+                <h2>Registro de Compras</h2>
+                
+                <div class="scanner-area">
+                    <p style="margin-bottom: 15px; color: #6c757d;">Escanea tu boleta o ingresa manualmente</p>
+                    <label for="boletaFile" class="scanner-label">📷 Escanear Boleta</label>
+                    <input type="file" id="boletaFile" accept="image/*" onchange="procesarBoleta(event)">
+                    <p style="margin-top: 10px; font-size: 12px; color: #6c757d;">Función de escaneo en desarrollo</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Insumo</label>
+                    <select id="compraInsumo">
+                        <option value="">Selecciona un insumo</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cantidad Comprada</label>
+                    <input type="number" id="compraCantidad" placeholder="Ej: 1000" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Precio Total ($)</label>
+                    <input type="number" id="compraPrecio" placeholder="Ej: 2500" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Compra</label>
+                    <input type="date" id="compraFecha">
+                </div>
+                <button class="btn btn-success" onclick="agregarCompra()">Registrar Compra</button>
+
+                <div id="listaCompras"><div class="loading">Cargando compras...</div></div>
+            </div>
+
+            <!-- SECCIÓN RECETAS -->
+            <div id="recetas" class="section">
+                <h2>Gestión de Recetas</h2>
+                <div class="form-group">
+                    <label>Nombre de la Receta</label>
+                    <input type="text" id="recetaNombre" placeholder="Ej: Pie de Limón">
+                </div>
+                <div class="form-group">
+                    <label>Porciones que produce</label>
+                    <input type="number" id="recetaPorciones" placeholder="Ej: 8" value="1">
+                </div>
+
+                <h3 style="margin-top: 20px; margin-bottom: 15px;">Ingredientes</h3>
+                <div id="ingredientesReceta"></div>
+
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label>Insumo</label>
+                        <select id="ingredienteInsumo">
+                            <option value="">Selecciona un insumo</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label>Cantidad</label>
+                        <input type="number" id="ingredienteCantidad" placeholder="Ej: 200" step="0.01">
+                    </div>
+                    <button class="btn btn-primary" onclick="agregarIngrediente()">Agregar Ingrediente</button>
+                </div>
+
+                <button class="btn btn-success" onclick="guardarReceta()" style="margin-top: 20px;">Guardar Receta</button>
+
+                <div id="listaRecetas"><div class="loading">Cargando recetas...</div></div>
+            </div>
+
+            <!-- SECCIÓN CALCULADORA -->
+            <div id="calculadora" class="section">
+                <h2>Calculadora de Precio de Venta</h2>
+
+                <div class="form-group">
+                    <label>Selecciona una Receta</label>
+                    <select id="calcReceta" onchange="calcularPrecio()">
+                        <option value="">Selecciona una receta</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Costos Adicionales (mano de obra, gas, electricidad, etc.)</label>
+                    <input type="number" id="costosAdicionales" placeholder="Ej: 1500" step="0.01" onchange="calcularPrecio()">
+                </div>
+
+                <div class="form-group">
+                    <label>Margen de Ganancia Deseado (%)</label>
+                    <input type="number" id="margenGanancia" placeholder="Ej: 50" value="50" onchange="calcularPrecio()">
+                </div>
+
+                <div id="resultadoCalculo"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        
+        let ingredientesTemp = [];
+
+        // Funciones de API
+        async function fetchInsumos() {
+            try {
+                const res = await fetch(`${API_URL}/insumos`);
+                return await res.json();
+            } catch (error) {
+                console.error('Error al obtener insumos:', error);
+                return [];
+            }
+        }
+
+        async function fetchCompras() {
+            try {
+                const res = await fetch(`${API_URL}/compras`);
+                return await res.json();
+            } catch (error) {
+                console.error('Error al obtener compras:', error);
+                return [];
+            }
+        }
+
+        async function fetchRecetas() {
+            try {
+                const res = await fetch(`${API_URL}/recetas`);
+                return await res.json();
+            } catch (error) {
+                console.error('Error al obtener recetas:', error);
+                return [];
+            }
+        }
+
+        async function addInsumo(data) {
+            const res = await fetch(`${API_URL}/insumos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            return await res.json();
+        }
+
+        async function deleteInsumo(id) {
+            await fetch(`${API_URL}/insumos/${id}`, { method: 'DELETE' });
+        }
+
+        async function addCompra(data) {
+            const res = await fetch(`${API_URL}/compras`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            return await res.json();
+        }
+
+        async function deleteCompra(id) {
+            await fetch(`${API_URL}/compras/${id}`, { method: 'DELETE' });
+        }
+
+        async function addReceta(data) {
+            const res = await fetch(`${API_URL}/recetas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            return await res.json();
+        }
+
+        async function deleteReceta(id) {
+            await fetch(`${API_URL}/recetas/${id}`, { method: 'DELETE' });
+        }
+
+        // Navegación entre secciones
+        function showSection(sectionId, event) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+                document.querySelectorAll('.tab').forEach(t => {
+                    t.setAttribute('aria-selected', 'false');
+                });
+                event.target.setAttribute('aria-selected', 'true');
+            }
+        }
+
+        // GESTIÓN DE INSUMOS
+        async function agregarInsumoRapido(nombre, unidad) {
+            try {
+                await addInsumo({ nombre, unidad });
+                actualizarListas();
+                
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Agregado';
+                btn.style.background = '#28a745';
+                btn.style.color = 'white';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = 'white';
+                    btn.style.color = '#667eea';
+                }, 1000);
+            } catch (error) {
+                alert('Error al agregar insumo');
+            }
+        }
+
+        async function agregarInsumo() {
+            const nombre = document.getElementById('insumoNombre').value.trim();
+            const unidad = document.getElementById('insumoUnidad').value;
+
+            if (!nombre) {
+                alert('Ingresa el nombre del insumo');
+                return;
+            }
+
+            try {
+                await addInsumo({ nombre, unidad });
+                document.getElementById('insumoNombre').value = '';
+                actualizarListas();
+            } catch (error) {
+                alert('Error al agregar insumo');
+            }
+        }
+
+        async function eliminarInsumo(id) {
+            if (confirm('¿Estás seguro de eliminar este insumo?')) {
+                await deleteInsumo(id);
+                actualizarListas();
+            }
+        }
+
+        // GESTIÓN DE COMPRAS
+        async function agregarCompra() {
+            const insumoId = parseInt(document.getElementById('compraInsumo').value);
+            const cantidad = parseFloat(document.getElementById('compraCantidad').value);
+            const precio = parseFloat(document.getElementById('compraPrecio').value);
+            const fecha = document.getElementById('compraFecha').value;
+
+            if (!insumoId || !cantidad || !precio || !fecha) {
+                alert('Completa todos los campos');
+                return;
+            }
+
+            try {
+                await addCompra({ insumoId, cantidad, precio, fecha });
+                document.getElementById('compraCantidad').value = '';
+                document.getElementById('compraPrecio').value = '';
+                actualizarListas();
+            } catch (error) {
+                alert('Error al registrar compra');
+            }
+        }
+
+        async function eliminarCompra(id) {
+            if (confirm('¿Estás seguro de eliminar esta compra?')) {
+                await deleteCompra(id);
+                actualizarListas();
+            }
+        }
+
+        function procesarBoleta(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('Por favor, selecciona un archivo de imagen válido.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                alert('Función de escaneo de boletas en desarrollo. Por favor, ingresa los datos manualmente.\n\nImagen cargada: ' + file.name);
+            };
+            reader.onerror = function() {
+                alert('Error al leer el archivo. Inténtalo de nuevo.');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // GESTIÓN DE RECETAS
+        function agregarIngrediente() {
+            const insumoId = parseInt(document.getElementById('ingredienteInsumo').value);
+            const cantidad = parseFloat(document.getElementById('ingredienteCantidad').value);
+
+            if (!insumoId || !cantidad) {
+                alert('Selecciona un insumo e ingresa la cantidad');
+                return;
+            }
+
+            const insumoSelect = document.getElementById('ingredienteInsumo');
+            const insumo = insumos.find(i => i.id === insumoId);
+
+            const ingredienteExistente = ingredientesTemp.find(ing => ing.insumoId === insumoId);
+            if (ingredienteExistente) {
+                alert('Este ingrediente ya está en la receta. Si necesitas más cantidad, elimínalo y agrégalo nuevamente.');
+                return;
+            }
+
+            ingredientesTemp.push({
+                insumoId: insumoId,
+                nombre: insumo.nombre,
+                unidad: insumo.unidad,
+                cantidad: cantidad
+            });
+
+            document.getElementById('ingredienteCantidad').value = '';
+            renderizarIngredientesTemp();
+        }
+
+        function eliminarIngredienteTemp(index) {
+            ingredientesTemp.splice(index, 1);
+            renderizarIngredientesTemp();
+        }
+
+        function renderizarIngredientesTemp() {
+            const container = document.getElementById('ingredientesReceta');
+            if (ingredientesTemp.length === 0) {
+                container.innerHTML = '<p style="color: #6c757d; text-align: center; padding: 20px;">No hay ingredientes agregados</p>';
+                return;
+            }
+
+            container.innerHTML = ingredientesTemp.map((ing, index) => `
+                <div class="ingredient-item">
+                    <span><strong>${ing.nombre}</strong> - ${ing.cantidad} ${ing.unidad}</span>
+                    <button class="btn btn-danger" onclick="eliminarIngredienteTemp(${index})">Eliminar</button>
+                </div>
+            `).join('');
+        }
+
+        async function guardarReceta() {
+            const nombre = document.getElementById('recetaNombre').value.trim();
+            const porciones = parseInt(document.getElementById('recetaPorciones').value);
+
+            if (!nombre) {
+                alert('Ingresa el nombre de la receta');
+                return;
+            }
+
+            if (ingredientesTemp.length === 0) {
+                alert('Agrega al menos un ingrediente');
+                return;
+            }
+
+            try {
+                await addReceta({
+                    nombre,
+                    porciones,
+                    ingredientes: [...ingredientesTemp]
+                });
+                document.getElementById('recetaNombre').value = '';
+                document.getElementById('recetaPorciones').value = '1';
+                ingredientesTemp = [];
+                renderizarIngredientesTemp();
+                actualizarListas();
+            } catch (error) {
+                alert('Error al guardar receta');
+            }
+        }
+
+        async function eliminarReceta(id) {
+            if (confirm('¿Estás seguro de eliminar esta receta?')) {
+                await deleteReceta(id);
+                actualizarListas();
+            }
+        }
+
+        // CÁLCULO DE COSTOS
+        function calcularCostoInsumo(insumoId, comprasArray) {
+            const comprasInsumo = comprasArray.filter(c => c.insumoId === insumoId);
+            if (comprasInsumo.length === 0) return 0;
+
+            comprasInsumo.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+            let totalCantidad = 0;
+            let totalPrecio = 0;
+
+            comprasInsumo.forEach(c => {
+                totalCantidad += c.cantidad;
+                totalPrecio += c.precio;
+            });
+
+            return totalCantidad > 0 ? totalPrecio / totalCantidad : 0;
+        }
+
+        function calcularCostoReceta(receta, comprasArray) {
+            let costoTotal = 0;
+            receta.ingredientes.forEach(ing => {
+                const precioPorUnidad = calcularCostoInsumo(ing.insumoId, comprasArray);
+                costoTotal += precioPorUnidad * ing.cantidad;
+            });
+            return costoTotal;
+        }
+
+        // CALCULADORA DE PRECIO
+        function calcularPrecio() {
+            const recetaId = parseInt(document.getElementById('calcReceta').value);
+            const costosAdicionales = parseFloat(document.getElementById('costosAdicionales').value) || 0;
+            const margen = parseFloat(document.getElementById('margenGanancia').value) || 0;
+
+            if (!recetaId) {
+                document.getElementById('resultadoCalculo').innerHTML = '';
+                return;
+            }
+
+            const receta = recetas.find(r => r.id === recetaId);
+            const costoIngredientes = calcularCostoReceta(receta, compras);
+            const costoTotal = costoIngredientes + costosAdicionales;
+            const precioVenta = costoTotal * (1 + margen / 100);
+            const precioPorPorcion = precioVenta / receta.porciones;
+
+            let html = `
+                <div class="cost-summary">
+                    <h3>💰 Análisis de Costos - ${receta.nombre}</h3>
+                    <div class="cost-item">
+                        <span>Costo de Ingredientes:</span>
+                        <span>$${costoIngredientes.toFixed(2)}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Costos Adicionales:</span>
+                        <span>$${costosAdicionales.toFixed(2)}</span>
+                    </div>
+                    <div class="cost-item total-cost">
+                        <span>Costo Total:</span>
+                        <span>$${costoTotal.toFixed(2)}</span>
+                    </div>
+                    <div class="cost-item">
+                        <span>Porciones:</span>
+                        <span>${receta.porciones}</span>
+                    </div>
+                </div>
+
+                <div class="profit-calculator">
+                    <h3>📊 Precio de Venta Sugerido</h3>
+                    <div class="profit-result">
+                        Precio Total: $${precioVenta.toFixed(2)}<br>
+                        <small>Por porción: $${precioPorPorcion.toFixed(2)}</small>
+                    </div>
+                    <p style="margin-top: 15px; text-align: center; color: #6c757d;">
+                        Con un margen de ganancia del ${margen}%
+                    </p>
+                </div>
+            `;
+
+            document.getElementById('resultadoCalculo').innerHTML = html;
+        }
+
+        // UTILIDADES
+        function getIconoParaInsumo(nombre) {
+            const nombreLower = nombre.toLowerCase();
+            if (nombreLower.includes('harina')) return '🌾';
+            if (nombreLower.includes('azúcar') || nombreLower.includes('azucar')) return '🍬';
+            if (nombreLower.includes('mantequilla')) return '🧈';
+            if (nombreLower.includes('huevo')) return '🥚';
+            if (nombreLower.includes('leche')) return '🥛';
+            if (nombreLower.includes('cacao') || nombreLower.includes('chocolate')) return '🍫';
+            if (nombreLower.includes('polvo de hornear') || nombreLower.includes('levadura')) return '🍰';
+            if (nombreLower.includes('vainilla')) return '🌿';
+            if (nombreLower.includes('sal')) return '🧂';
+            if (nombreLower.includes('crema')) return '🥄';
+            if (nombreLower.includes('queso')) return '🧀';
+            if (nombreLower.includes('limon') || nombreLower.includes('limón')) return '🍋';
+            if (nombreLower.includes('naranja')) return '🍊';
+            if (nombreLower.includes('fresa')) return '🍓';
+            if (nombreLower.includes('nuez')) return '🌰';
+            if (nombreLower.includes('almendra')) return '🥜';
+            if (nombreLower.includes('canela')) return '🌿';
+            if (nombreLower.includes('miel')) return '🍯';
+            if (nombreLower.includes('gelatina')) return '🍮';
+            if (nombreLower.includes('menta')) return '🌱';
+            if (nombreLower.includes('cereza')) return '🍒';
+            if (nombreLower.includes('manzana')) return '🍎';
+            if (nombreLower.includes('platano') || nombreLower.includes('plátano') || nombreLower.includes('banana')) return '🍌';
+            return '📦';
+        }
+
+        // Variables globales
+        let insumos = [];
+        let compras = [];
+        let recetas = [];
+
+        // ACTUALIZAR LISTAS
+        async function actualizarListas() {
+            insumos = await fetchInsumos();
+            compras = await fetchCompras();
+            recetas = await fetchRecetas();
+
+            // Actualizar lista de insumos
+            const listaInsumos = document.getElementById('listaInsumos');
+            if (insumos.length === 0) {
+                listaInsumos.innerHTML = '<div class="empty-state"><p>No hay insumos registrados</p></div>';
+            } else {
+                listaInsumos.innerHTML = insumos.map(insumo => {
+                    const precioActual = calcularCostoInsumo(insumo.id, compras);
+                    const icono = getIconoParaInsumo(insumo.nombre);
+                    return `
+                        <div class="card">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center;">
+                                    <span style="font-size: 30px; margin-right: 15px;">${icono}</span>
+                                    <div>
+                                        <h3>${insumo.nombre}</h3>
+                                        <p style="color: #6c757d;">Unidad: ${insumo.unidad}</p>
+                                        ${precioActual > 0 ? `<span class="price-tag">Precio actual: $${precioActual.toFixed(2)}/${insumo.unidad}</span>` : '<span style="color: #dc3545; font-size: 12px;">⚠️ Sin compras registradas</span>'}
+                                    </div>
+                                </div>
+                                <button class="btn btn-danger" onclick="eliminarInsumo(${insumo.id})">Eliminar</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Actualizar lista de compras
+            const listaCompras = document.getElementById('listaCompras');
+            if (compras.length === 0) {
+                listaCompras.innerHTML = '<div class="empty-state"><p>No hay compras registradas</p></div>';
+            } else {
+                listaCompras.innerHTML = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Insumo</th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${compras.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).map(compra => {
+                                const insumo = insumos.find(i => i.id === compra.insumoId);
+                                return `
+                                    <tr>
+                                        <td>${new Date(compra.fecha).toLocaleDateString()}</td>
+                                        <td>${insumo ? insumo.nombre : 'N/A'}</td>
+                                        <td>${compra.cantidad} ${insumo ? insumo.unidad : ''}</td>
+                                        <td>$${compra.precio.toFixed(2)}</td>
+                                        <td><button class="btn btn-danger" onclick="eliminarCompra(${compra.id})">Eliminar</button></td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            // Actualizar lista de recetas
+            const listaRecetas = document.getElementById('listaRecetas');
+            if (recetas.length === 0) {
+                listaRecetas.innerHTML = '<div class="empty-state"><p>No hay recetas registradas</p></div>';
+            } else {
+                listaRecetas.innerHTML = recetas.map(receta => {
+                    const costo = calcularCostoReceta(receta, compras);
+                    return `
+                        <div class="card">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h3>${receta.nombre}</h3>
+                                    <p style="color: #6c757d;">Porciones: ${receta.porciones}</p>
+                                    <p style="color: #6c757d;">Ingredientes: ${receta.ingredientes.length}</p>
+                                    <span class="price-tag">Costo: $${costo.toFixed(2)}</span>
+                                </div>
+                                <button class="btn btn-danger" onclick="eliminarReceta(${receta.id})">Eliminar</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Actualizar selectores
+            const selectInsumoCompra = document.getElementById('compraInsumo');
+            selectInsumoCompra.innerHTML = '<option value="">Selecciona un insumo</option>' +
+                insumos.map(i => `<option value="${i.id}">${i.nombre}</option>`).join('');
+
+            const selectIngredienteInsumo = document.getElementById('ingredienteInsumo');
+            selectIngredienteInsumo.innerHTML = '<option value="">Selecciona un insumo</option>' +
+                insumos.map(i => `<option value="${i.id}">${i.nombre}</option>`).join('');
+
+            const selectCalcReceta = document.getElementById('calcReceta');
+            selectCalcReceta.innerHTML = '<option value="">Selecciona una receta</option>' +
+                recetas.map(r => `<option value="${r.id}">${r.nombre}</option>`).join('');
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('compraFecha').valueAsDate = new Date();
+            actualizarListas();
+        });
+    </script>
+</body>
+</html>
