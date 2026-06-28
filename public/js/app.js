@@ -1115,12 +1115,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const cod = document.getElementById('insumoCodigo');
     if (cod) cod.addEventListener('input', () => { cod.dataset.manual = cod.value ? '1' : ''; });
 
-    onAuthStateChanged(auth, user => {
+    const EMAILS_PERMITIDOS = ['dubeda06@gmail.com', 'claudia.jarap01@gmail.com'];
+
+    onAuthStateChanged(auth, async user => {
         const loginScreen = document.getElementById('loginScreen');
         const appRoot     = document.getElementById('appRoot');
         const userInfo    = document.getElementById('userInfo');
         const userName    = document.getElementById('userName');
         if (user) {
+            if (!EMAILS_PERMITIDOS.includes(user.email)) {
+                await signOut(auth);
+                loginScreen.style.display = 'flex';
+                appRoot.style.display     = 'none';
+                userInfo.style.display    = 'none';
+                toast('Acceso no autorizado: ' + user.email, 'error');
+                return;
+            }
             loginScreen.style.display = 'none';
             appRoot.style.display     = 'block';
             userInfo.style.display    = 'flex';
