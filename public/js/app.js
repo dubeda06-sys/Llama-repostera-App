@@ -556,9 +556,27 @@ function fileToImage(file) {
     });
 }
 
-// dibuja la imagen rotada + escala de grises + contraste → canvas para OCR
+// umbral de Otsu sobre un histograma de grises (d ya en gris: r=g=b)
+function otsuThreshold(px) {
+    const hist = new Array(256).fill(0);
+    let total = 0;
+    for (let i = 0; i < px.length; i += 4) { hist[px[i]]++; total++; }
+    let sum = 0; for (let t = 0; t < 256; t++) sum += t * hist[t];
+    let sumB = 0, wB = 0, maxVar = -1, thr = 127;
+    for (let t = 0; t < 256; t++) {
+        wB += hist[t]; if (!wB) continue;
+        const wF = total - wB; if (!wF) break;
+        sumB += t * hist[t];
+        const mB = sumB / wB, mF = (sum - sumB) / wF;
+        const between = wB * wF * (mB - mF) * (mB - mF);
+        if (between > maxVar) { maxVar = between; thr = t; }
+    }
+    return thr;
+}
+
+// dibuja la imagen rotada + grises + contraste + (opcional) binarización Otsu → canvas para OCR
 // targetMax = lado mayor deseado en px (acota tamaño para velocidad/memoria)
-function prepararCanvas(img, rot, targetMax = 2200) {
+function prepararCanvas(img, rot, targetMax = 2400, binarizar = false) {
     const rad = rot * Math.PI / 180;
     const swap = (rot === 90 || rot === 270);
     const w = img.naturalWidth, h = img.naturalHeight;
@@ -569,6 +587,8 @@ function prepararCanvas(img, rot, targetMax = 2200) {
     const canvas = document.createElement('canvas');
     canvas.width = cw; canvas.height = ch;
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.save();
     ctx.translate(cw / 2, ch / 2);
     ctx.rotate(rad);
@@ -577,12 +597,21 @@ function prepararCanvas(img, rot, targetMax = 2200) {
     ctx.restore();
     const d = ctx.getImageData(0, 0, cw, ch);
     const px = d.data;
-    const contrast = 1.4, intercept = 128 * (1 - contrast);
+    // grises + contraste
+    const contrast = 1.45, intercept = 128 * (1 - contrast);
     for (let i = 0; i < px.length; i += 4) {
         let g = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
         g = g * contrast + intercept;
         g = g < 0 ? 0 : g > 255 ? 255 : g;
         px[i] = px[i + 1] = px[i + 2] = g;
+    }
+    // binarización Otsu (gran mejora en papel térmico)
+    if (binarizar) {
+        const thr = otsuThreshold(px);
+        for (let i = 0; i < px.length; i += 4) {
+            const v = px[i] > thr ? 255 : 0;
+            px[i] = px[i + 1] = px[i + 2] = v;
+        }
     }
     ctx.putImageData(d, 0, 0);
     return canvas;
@@ -601,10 +630,24 @@ function barraProgreso(p) {
         </div>`;
 }
 
-async function ocrCanvas(canvas, onProgress) {
-    const { data } = await Tesseract.recognize(canvas, 'spa', {
-        logger: m => { if (m.status === 'recognizing text' && onProgress) onProgress(m.progress); }
+let _tessWorker = null;
+let _tessOnProgress = null;
+
+async function getTessWorker() {
+    if (_tessWorker) return _tessWorker;
+    _tessWorker = await Tesseract.createWorker('spa', 1, {
+        logger: m => { if (m.status === 'recognizing text' && _tessOnProgress) _tessOnProgress(m.progress); }
     });
+    // PSM 6 = bloque uniforme (mejor para boletas en columna); conserva espacios entre palabras
+    await _tessWorker.setParameters({ tessedit_pageseg_mode: '6', preserve_interword_spaces: '1' });
+    return _tessWorker;
+}
+
+async function ocrCanvas(canvas, onProgress) {
+    const worker = await getTessWorker();
+    _tessOnProgress = onProgress || null;
+    const { data } = await worker.recognize(canvas);
+    _tessOnProgress = null;
     return data; // { text, confidence, ... }
 }
 
@@ -642,7 +685,7 @@ async function procesarBoleta(event) {
 // OCR completo con la rotación actual → parse → preview
 async function leerBoleta() {
     if (!boletaImg) return;
-    const canvas = prepararCanvas(boletaImg, boletaRot, 2200);
+    const canvas = prepararCanvas(boletaImg, boletaRot, 2400);
     setBoletaProgress(barraProgreso(0));
     const data = await ocrCanvas(canvas, p => setBoletaProgress(barraProgreso(p)));
     setBoletaProgress('');
@@ -656,6 +699,16 @@ function rotarBoleta() {
     boletaRot = (boletaRot + 90) % 360;
     document.getElementById('boletaPreview').innerHTML = '';
     leerBoleta().catch(e => { console.error(e); toast('Error al releer', 'error'); });
+}
+
+// valida dígito verificador EAN-13 (descarta lecturas OCR erróneas)
+function validarEAN(code) {
+    if (!/^\d{13}$/.test(code)) return code && code.length === 12; // UPC-12: acepta sin validar
+    const dig = code.split('').map(Number);
+    let sum = 0;
+    for (let i = 0; i < 12; i++) sum += dig[i] * (i % 2 === 0 ? 1 : 3);
+    const check = (10 - (sum % 10)) % 10;
+    return check === dig[12];
 }
 
 // número chileno → entero (6.790 → 6790, -1.800 → -1800)
@@ -684,14 +737,14 @@ function cantidadUnidadDesc(desc) {
 function limpiarNombreBoleta(desc) {
     return desc
         .replace(/\b\d+\s*(kg|gr|g|ml|l|un|u|uds?|unidades?)\b/gi, ' ') // tokens de tamaño
-        .replace(/\b\d{3,6}\b/g, ' ')   // números sueltos restantes
+        .replace(/\b\d{1,6}\b/g, ' ')   // números sueltos restantes (incl. dígitos de miles partidos)
         .replace(/[^\wáéíóúñÁÉÍÓÚÑ\s./%-]/g, ' ')
         .replace(/\s{2,}/g, ' ')
         .trim();
 }
 
 function aplicarDescuento(items, linea) {
-    const md = linea.match(/-\s*\d{1,3}(?:\.\d{3})*/);
+    const md = linea.match(/-\s*\d{1,3}(?:[.,\s]\s*\d{3})*/);
     if (md && items.length) {
         const desc = Math.abs(parseMontoCL(md[0]));
         const it = items[items.length - 1];
@@ -707,17 +760,18 @@ function parseBoleta(texto) {
         // descuentos (aplican al último ítem)
         if (BOLETA_DESCUENTO.test(linea)) { aplicarDescuento(items, linea); continue; }
         if (BOLETA_IGNORAR.test(linea)) continue;
+        // línea de precio por peso ("0,424 KG X $1.990") → no es un ítem propio
+        if (/\bkg\s*x\b|\bx\s*\$/i.test(linea)) continue;
 
         const eanM = linea.match(/\b(\d{12,13})\b/);
         const ean = eanM ? eanM[1] : null;
 
-        // ítem válido solo si trae EAN o un precio con separador de miles (descarta
-        // direcciones/números de calle que no tienen ninguno)
-        const hayMiles = /-?\d{1,3}\.\d{3}\b/.test(ean ? linea.replace(ean, ' ') : linea);
-        if (!ean && !hayMiles) continue;
+        // los ítems de esta boleta siempre traen código de barras → exigir EAN descarta
+        // totales/subtotales/líneas basura que el OCR a veces deja sin la palabra clave.
+        if (!ean) continue;
 
-        // candidatos a precio: montos con miles (6.790) o enteros 3-6 dígitos sueltos (844)
-        const precios = linea.match(/-?\d{1,3}(?:\.\d{3})+|\b\d{3,6}\b/g);
+        // candidatos a precio: montos con miles (6.790 / 6 790 / 6, 757) o enteros 3-6 dígitos (844)
+        const precios = linea.match(/-?\d{1,3}(?:[.,\s]\s*\d{3})+|\b\d{3,6}\b/g);
         if (!precios) continue;
         let precio = null;
         for (let i = precios.length - 1; i >= 0; i--) {
@@ -730,17 +784,18 @@ function parseBoleta(texto) {
         // descripción: quitar EAN y montos con miles; extraer cantidad/unidad ANTES de limpiar
         let desc = linea;
         if (ean) desc = desc.replace(ean, ' ');
-        desc = desc.replace(/-?\d{1,3}(?:\.\d{3})+/g, ' ');
+        desc = desc.replace(/-?\d{1,3}(?:[.,\s]\s*\d{3})+/g, ' ');
         const { cantidad, unidad } = cantidadUnidadDesc(desc);
         const nombre = limpiarNombreBoleta(desc);
         if (nombre.length < 2) continue;
 
-        // match: EAN primero (indexador), luego nombre
-        let insumo = ean ? insumoPorBarras(ean) : null;
+        // match: EAN válido primero (indexador), luego nombre
+        const eanOk = ean ? validarEAN(ean) : false;
+        let insumo = eanOk ? insumoPorBarras(ean) : null;
         let matchSource = insumo ? 'ean' : null;
         if (!insumo) { insumo = matchInsumo(nombre); if (insumo) matchSource = 'nombre'; }
 
-        items.push({ ean, nombreRaw: nombre, cantidad, unidad, precio, descuento: 0, fecha: hoyISO(), insumoId: insumo ? insumo.id : null, matchSource });
+        items.push({ ean, eanOk, nombreRaw: nombre, cantidad, unidad, precio, descuento: 0, fecha: hoyISO(), insumoId: insumo ? insumo.id : null, matchSource });
     }
     return items;
 }
@@ -772,7 +827,7 @@ function renderBoletaPreview() {
             <select onchange="boletaEdit(${i},'unidad',this.value)" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
                 ${['g', 'kg', 'ml', 'l', 'unidad'].map(u => `<option value="${u}" ${u === r.unidad ? 'selected' : ''}>${u}</option>`).join('')}
             </select>
-            <input type="number" value="${r.precio}" step="1" oninput="boletaEdit(${i},'precio',this.value)" title="Precio total pagado" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
+            <input type="number" value="${r.precio}" step="1" oninput="boletaEdit(${i},'precio',this.value)" title="${r.precio > 0 ? 'Precio total pagado' : '⚠ No se leyó bien el precio — corrígelo'}" style="padding:7px;border:2px solid ${r.precio > 0 ? '#e9ecef' : '#dc3545'};border-radius:8px;">
             <select onchange="boletaEdit(${i},'insumoId',this.value)" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
                 <option value="__new__" ${!r.insumoId ? 'selected' : ''}>➕ Crear "${esc(r.nombreRaw)}"</option>
                 ${insumos.map(ins => `<option value="${ins.id}" ${ins.id === r.insumoId ? 'selected' : ''}>${esc(ins.nombre)}</option>`).join('')}
@@ -793,7 +848,7 @@ function boletaEdit(i, campo, valor) {
 
 function boletaRematch(i) {
     const r = boletaParsed[i];
-    let insumo = r.ean ? insumoPorBarras(r.ean) : null;
+    let insumo = (r.ean && r.eanOk) ? insumoPorBarras(r.ean) : null;
     r.matchSource = insumo ? 'ean' : null;
     if (!insumo) { insumo = matchInsumo((r.nombreRaw || '').trim()); if (insumo) r.matchSource = 'nombre'; }
     r.insumoId = insumo ? insumo.id : null;
@@ -809,23 +864,24 @@ async function aplicarBoleta() {
     let ok = 0;
     for (const r of boletaParsed) {
         if (!r.cantidad || !r.precio) continue;
+        const eanUse = (r.ean && r.eanOk) ? r.ean : null; // solo EAN válidos
         let insumoId = r.insumoId;
         if (!insumoId) {
-            const clave = (r.ean || r.nombreRaw.toLowerCase());
+            const clave = (eanUse || r.nombreRaw.toLowerCase());
             if (nuevos[clave]) insumoId = nuevos[clave];
             else {
                 const codigo = sugerirCodigo(r.nombreRaw);
-                const datos = { codigo, nombre: r.nombreRaw, codigosBarras: r.ean ? [r.ean] : [], precio: null, unidadBase: null, fechaCreacion: new Date().toISOString() };
+                const datos = { codigo, nombre: r.nombreRaw, codigosBarras: eanUse ? [eanUse] : [], precio: null, unidadBase: null, fechaCreacion: new Date().toISOString() };
                 const ref = await addDoc(collection(db, 'insumos'), datos);
                 insumos.push({ id: ref.id, ...datos });
                 insumoId = ref.id;
                 nuevos[clave] = insumoId;
             }
-        } else if (r.ean) {
-            // auto-indexar: ligar EAN al insumo existente si aún no lo tiene
+        } else if (eanUse) {
+            // auto-indexar: ligar EAN válido al insumo existente si aún no lo tiene
             const ins = insumos.find(x => x.id === insumoId);
-            if (ins && !(ins.codigosBarras || []).includes(r.ean) && !barrasDuplicado(r.ean, insumoId)) {
-                const nb = [...(ins.codigosBarras || []), r.ean];
+            if (ins && !(ins.codigosBarras || []).includes(eanUse) && !barrasDuplicado(eanUse, insumoId)) {
+                const nb = [...(ins.codigosBarras || []), eanUse];
                 await updateDoc(doc(db, 'insumos', insumoId), { codigosBarras: nb });
                 ins.codigosBarras = nb;
             }
