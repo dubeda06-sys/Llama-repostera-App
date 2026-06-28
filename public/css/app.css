@@ -84,24 +84,46 @@ body {
     #dashboard { grid-template-columns: 1fr; }
 }
 
+/* acento por card (sin tocar HTML) */
+#dashboard .nav-card:nth-child(1) { --accent:#4fa8d8; --soft:#eaf6fc; } /* Insumos  - azul  */
+#dashboard .nav-card:nth-child(2) { --accent:#f06595; --soft:#fdeef4; } /* Compras  - rosa  */
+#dashboard .nav-card:nth-child(3) { --accent:#37b24d; --soft:#ebfbee; } /* Recetas  - verde */
+#dashboard .nav-card:nth-child(4) { --accent:#f59f00; --soft:#fff4e0; } /* Calc.    - ámbar */
+
 .nav-card {
+    --accent: #4fa8d8;
+    --soft: #eaf6fc;
     position: relative;
-    background: linear-gradient(160deg, #eaf6fc 0%, #f8f9fa 100%);
+    background: linear-gradient(160deg, var(--soft) 0%, #ffffff 100%);
     border-radius: 18px;
     padding: 0;
     cursor: pointer;
     border: 2px solid #e9ecef;
-    transition: all 0.22s;
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s, border-color .25s;
     overflow: hidden;
     display: flex;
     flex-direction: column;
 }
 
 .nav-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 32px rgba(0,0,0,0.13);
-    border-color: #4fa8d8;
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 18px 40px color-mix(in srgb, var(--accent) 38%, transparent);
+    border-color: var(--accent);
 }
+
+/* destello (shine) que cruza al hover */
+.nav-card::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 60%; height: 100%;
+    z-index: 3;
+    pointer-events: none;
+    background: linear-gradient(100deg, transparent 0%, rgba(255,255,255,.55) 50%, transparent 100%);
+    transform: translateX(-180%) skewX(-18deg);
+    transition: transform .7s ease;
+}
+.nav-card:hover::after { transform: translateX(280%) skewX(-18deg); }
 
 /* imagen cuadrada que abarca el ancho de la card */
 .nav-card .nc-icon {
@@ -112,14 +134,32 @@ body {
     justify-content: center;
     padding: 16px;
 }
-.nav-card .nc-icon img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.nav-card .nc-icon img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+    animation: floatBob 3.5s ease-in-out infinite;
+    transition: transform .3s ease;
+    transform-origin: center bottom;
+}
+/* flotación escalonada por card */
+#dashboard .nav-card:nth-child(1) .nc-icon img { animation-delay: 0s; }
+#dashboard .nav-card:nth-child(2) .nc-icon img { animation-delay: .4s; }
+#dashboard .nav-card:nth-child(3) .nc-icon img { animation-delay: .8s; }
+#dashboard .nav-card:nth-child(4) .nc-icon img { animation-delay: 1.2s; }
+
+.nav-card:hover .nc-icon img {
+    animation: wiggle .6s ease-in-out;
+    transform: scale(1.08);
+}
 
 /* badge contador */
 .nav-card .nc-count {
     position: absolute;
     top: 12px; right: 12px;
-    z-index: 2;
-    background: #4fa8d8;
+    z-index: 4;
+    background: var(--accent);
     color: #fff;
     font-size: 16px;
     font-weight: 800;
@@ -133,20 +173,50 @@ body {
     justify-content: center;
     box-shadow: 0 2px 6px rgba(0,0,0,.18);
 }
+.nav-card:hover .nc-count { animation: badgePop .45s ease; }
 
 /* recuadro leyenda */
 .nav-card .nc-caption {
     background: rgba(255,255,255,.94);
     border-top: 1px solid rgba(0,0,0,.06);
-    padding: 14px 18px;
+    padding: 16px 20px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     text-align: left;
     margin-top: auto;
+    transition: background .25s ease;
 }
-.nav-card .nc-title { font-weight: 800; color: #343a40; font-size: 20px; }
-.nav-card .nc-sub { font-size: 13px; color: #adb5bd; margin-top: 2px; }
+.nav-card:hover .nc-caption { background: var(--soft); }
+.nav-card .nc-title {
+    font-weight: 800;
+    color: #343a40;
+    font-size: 22px;
+    transition: color .25s ease, letter-spacing .25s ease;
+}
+.nav-card:hover .nc-title {
+    color: var(--accent);
+    letter-spacing: .5px;
+    text-transform: uppercase;
+}
+
+@keyframes floatBob {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-7px); }
+}
+@keyframes wiggle {
+    0%   { transform: scale(1.08) rotate(0deg); }
+    25%  { transform: scale(1.08) rotate(-4deg); }
+    50%  { transform: scale(1.08) rotate(4deg); }
+    75%  { transform: scale(1.08) rotate(-2deg); }
+    100% { transform: scale(1.08) rotate(0deg); }
+}
+@keyframes badgePop {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.28); }
+    100% { transform: scale(1); }
+}
+.nav-card .nc-sub { font-size: 14px; color: #868e96; margin-top: 3px; }
 
 /* Sections */
 .content { padding: 30px; display: none; }
@@ -626,7 +696,7 @@ th { background: #f8f9fa; font-weight: 600; color: #495057; }
     .content   { padding: 16px; }
     #dashboard { gap: 14px; padding: 16px; }
     .nav-card  { padding: 0; }
-    .nav-card .nc-title { font-size: 18px; }
+    .nav-card .nc-title { font-size: 20px; }
 
     .grid-insumos, .grid-barras-mod, .grid-compras,
     .grid-receta-top, .grid-ingrediente, .grid-config-2 {
