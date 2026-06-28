@@ -10,7 +10,7 @@
     <!-- Pantalla de inicio de sesión -->
     <div id="loginScreen">
         <div class="login-card">
-            <div class="login-logo">🧁</div>
+            <div class="login-logo"><img src="img/base.png" alt="Llama Repostera"></div>
             <h1 class="login-title">Llama Repostera</h1>
             <p class="login-sub">Tu gestor de costos de repostería</p>
             <button class="btn-google" onclick="signInGoogle()">
@@ -22,8 +22,9 @@
 
     <div class="container" id="appRoot" style="display:none;">
         <div class="header">
+            <img class="header-banner" src="img/banner.png" alt="Llama Repostera">
             <button class="config-btn" onclick="openSection('configuracion')" title="Configuración" aria-label="Configuración">⚙️</button>
-            <h1>🧁 Gestor de Repostería</h1>
+            <h1><img class="header-logo" src="img/base.png" alt=""> Gestor de Repostería</h1>
             <p>Controla tus costos y maximiza tus ganancias</p>
             <div id="userInfo" style="display:none; align-items:center; justify-content:center; gap:8px; margin-top:10px;">
                 <span id="userName" style="font-size:13px; color:rgba(255,255,255,.85);"></span>
@@ -35,25 +36,25 @@
         <!-- Dashboard: 4 nav cards -->
         <div id="dashboard">
             <div class="nav-card" onclick="openSection('insumos')">
-                <div class="nc-icon">📦</div>
+                <div class="nc-icon"><img src="img/insumos.png" alt="Insumos"></div>
                 <div class="nc-count" id="countInsumos">0</div>
                 <div class="nc-title">Insumos</div>
                 <div class="nc-sub">ingredientes</div>
             </div>
             <div class="nav-card" onclick="openSection('compras')">
-                <div class="nc-icon">🛒</div>
+                <div class="nc-icon"><img src="img/compras.png" alt="Compras"></div>
                 <div class="nc-count" id="countCompras">0</div>
                 <div class="nc-title">Compras</div>
                 <div class="nc-sub">registros</div>
             </div>
             <div class="nav-card" onclick="openSection('recetas')">
-                <div class="nc-icon">📖</div>
+                <div class="nc-icon"><img src="img/recetas.png" alt="Recetas"></div>
                 <div class="nc-count" id="countRecetas">0</div>
                 <div class="nc-title">Recetas</div>
                 <div class="nc-sub">guardadas</div>
             </div>
             <div class="nav-card" onclick="openSection('calculadora')">
-                <div class="nc-icon">💰</div>
+                <div class="nc-icon"><img src="img/calculadora.png" alt="Calculadora"></div>
                 <div class="nc-count">→</div>
                 <div class="nc-title">Calculadora</div>
                 <div class="nc-sub">precio de venta</div>
@@ -65,7 +66,7 @@
 
             <!-- INSUMOS -->
             <div id="insumos" class="section">
-                <div class="section-title">📦 Insumos</div>
+                <div class="section-title"><img class="st-icon" src="img/insumos.png" alt=""> Insumos</div>
 
                 <div class="search-wrapper">
                     <span class="search-icon">🔍</span>
@@ -133,7 +134,7 @@
 
             <!-- COMPRAS -->
             <div id="compras" class="section">
-                <div class="section-title">🛒 Compras</div>
+                <div class="section-title"><img class="st-icon" src="img/compras.png" alt=""> Compras</div>
 
                 <div class="scanner-area">
                     <p style="margin-bottom:12px; color:#6c757d; font-size:14px;">Escanea tu boleta o ingresa manualmente</p>
@@ -177,7 +178,7 @@
 
             <!-- RECETAS -->
             <div id="recetas" class="section">
-                <div class="section-title">📖 Recetas</div>
+                <div class="section-title"><img class="st-icon" src="img/recetas.png" alt=""> Recetas</div>
 
                 <!-- Importador de recetas -->
                 <div class="barras-module">
@@ -242,7 +243,7 @@
 
             <!-- CALCULADORA -->
             <div id="calculadora" class="section">
-                <div class="section-title">💰 Calculadora de Precio</div>
+                <div class="section-title"><img class="st-icon" src="img/calculadora.png" alt=""> Calculadora de Precio</div>
 
                 <div class="form-group">
                     <label>Receta</label>

@@ -24,8 +24,10 @@ body {
     position: relative;
 }
 
-.header h1 { font-size: 2.2em; margin-bottom: 6px; }
+.header h1 { font-size: 2.2em; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .header p { opacity: 0.9; font-size: 14px; }
+.header-banner { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto 14px; border-radius: 14px; }
+.header-logo { width: 40px; height: 40px; object-fit: contain; }
 
 /* Back button */
 .back-btn {
@@ -99,6 +101,7 @@ body {
 }
 
 .nav-card .nc-icon { font-size: 2.6em; margin-bottom: 12px; }
+.nav-card .nc-icon img { width: 64px; height: 64px; object-fit: contain; display: block; margin: 0 auto; }
 .nav-card .nc-count { font-size: 2em; font-weight: 800; color: #f5576c; line-height: 1; }
 .nav-card .nc-title { font-weight: 700; color: #343a40; font-size: 15px; margin-top: 6px; }
 .nav-card .nc-sub { font-size: 11px; color: #adb5bd; margin-top: 3px; }
@@ -117,7 +120,11 @@ body {
     margin-bottom: 24px;
     padding-bottom: 12px;
     border-bottom: 2px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
+.section-title .st-icon { width: 36px; height: 36px; object-fit: contain; }
 
 /* Search bar */
 .search-wrapper { position: relative; margin-bottom: 20px; }
@@ -580,6 +587,8 @@ th { background: #f8f9fa; font-weight: 600; color: #495057; }
     #dashboard { gap: 12px; padding: 16px; }
     .nav-card  { padding: 20px 10px; }
     .nav-card .nc-icon { font-size: 2em; }
+    .nav-card .nc-icon img { width: 48px; height: 48px; }
+    .header-banner { max-width: 300px; }
 
     .grid-insumos, .grid-barras-mod, .grid-compras,
     .grid-receta-top, .grid-ingrediente, .grid-config-2 {
@@ -635,6 +644,7 @@ th { background: #f8f9fa; font-weight: 600; color: #495057; }
 }
 
 .login-logo { font-size: 64px; margin-bottom: 16px; line-height: 1; }
+.login-logo img { width: 96px; height: 96px; object-fit: contain; }
 
 .login-title {
     font-size: 26px;
