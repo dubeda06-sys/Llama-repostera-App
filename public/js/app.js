@@ -491,14 +491,8 @@ function renderCompras() {
     </tbody></table></div>`;
 }
 
-async function agregarCompra() {
-    const insumoId = document.getElementById('compraInsumo').value;
-    const cantidad = parseFloat(document.getElementById('compraCantidad').value);
-    const unidad   = document.getElementById('compraUnidad').value;
-    const precio   = parseFloat(document.getElementById('compraPrecio').value);
-    const fecha    = document.getElementById('compraFecha').value;
-    if (!insumoId || !cantidad || !precio || !fecha) return toast('Completa todos los campos', 'error');
-
+// núcleo reutilizable: registra una compra y reescribe el precio/unidadBase del insumo
+async function registrarCompraCore(insumoId, cantidad, unidad, precio, fecha) {
     const ref = await addDoc(collection(db, 'compras'), { insumoId, cantidad, unidad, precio, fecha, fechaRegistro: new Date().toISOString() });
     compras.push({ id: ref.id, insumoId, cantidad, unidad, precio, fecha });
 
@@ -515,6 +509,17 @@ async function agregarCompra() {
         ins.precio = precioNuevo;
         ins.unidadBase = unidadBase;
     }
+}
+
+async function agregarCompra() {
+    const insumoId = document.getElementById('compraInsumo').value;
+    const cantidad = parseFloat(document.getElementById('compraCantidad').value);
+    const unidad   = document.getElementById('compraUnidad').value;
+    const precio   = parseFloat(document.getElementById('compraPrecio').value);
+    const fecha    = document.getElementById('compraFecha').value;
+    if (!insumoId || !cantidad || !precio || !fecha) return toast('Completa todos los campos', 'error');
+
+    await registrarCompraCore(insumoId, cantidad, unidad, precio, fecha);
 
     document.getElementById('compraCantidad').value = '';
     document.getElementById('compraPrecio').value = '';
@@ -535,9 +540,307 @@ async function eliminarCompra(id) {
     actualizarContadores();
 }
 
-function procesarBoleta(event) {
+// ── Interpretador de boletas (OCR cliente con Tesseract.js) ───
+let boletaImg = null;   // HTMLImageElement original
+let boletaRot = 0;      // rotación aplicada (0/90/180/270)
+let boletaParsed = [];
+
+function hoyISO() { return new Date().toISOString().slice(0, 10); }
+
+function fileToImage(file) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+// dibuja la imagen rotada + escala de grises + contraste → canvas para OCR
+// targetMax = lado mayor deseado en px (acota tamaño para velocidad/memoria)
+function prepararCanvas(img, rot, targetMax = 2200) {
+    const rad = rot * Math.PI / 180;
+    const swap = (rot === 90 || rot === 270);
+    const w = img.naturalWidth, h = img.naturalHeight;
+    const baseW = swap ? h : w, baseH = swap ? w : h;
+    const scale = targetMax / Math.max(baseW, baseH);
+    const cw = Math.round(baseW * scale);
+    const ch = Math.round(baseH * scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = cw; canvas.height = ch;
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.translate(cw / 2, ch / 2);
+    ctx.rotate(rad);
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, -w / 2, -h / 2);
+    ctx.restore();
+    const d = ctx.getImageData(0, 0, cw, ch);
+    const px = d.data;
+    const contrast = 1.4, intercept = 128 * (1 - contrast);
+    for (let i = 0; i < px.length; i += 4) {
+        let g = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+        g = g * contrast + intercept;
+        g = g < 0 ? 0 : g > 255 ? 255 : g;
+        px[i] = px[i + 1] = px[i + 2] = g;
+    }
+    ctx.putImageData(d, 0, 0);
+    return canvas;
+}
+
+function setBoletaProgress(html) {
+    const el = document.getElementById('boletaProgress');
+    if (el) el.innerHTML = html;
+}
+
+function barraProgreso(p) {
+    const pct = Math.round(p * 100);
+    return `<div style="font-size:13px;color:#6c757d;margin-bottom:6px;">🔍 Leyendo boleta… ${pct}%</div>
+        <div style="height:8px;background:#e9ecef;border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:#4fa8d8;transition:width .2s;"></div>
+        </div>`;
+}
+
+async function ocrCanvas(canvas, onProgress) {
+    const { data } = await Tesseract.recognize(canvas, 'spa', {
+        logger: m => { if (m.status === 'recognizing text' && onProgress) onProgress(m.progress); }
+    });
+    return data; // { text, confidence, ... }
+}
+
+// elige orientación con OCR rápido (reducido) en 0/90/180/270 por mayor confianza
+async function detectarRotacion(img) {
+    let best = { rot: 0, conf: -1 };
+    for (const rot of [0, 90, 180, 270]) {
+        try {
+            const data = await ocrCanvas(prepararCanvas(img, rot, 1000));
+            if (data.confidence > best.conf) best = { rot, conf: data.confidence };
+        } catch (e) { /* ignora rotación fallida */ }
+    }
+    return best.rot;
+}
+
+async function procesarBoleta(event) {
     const file = event.target.files[0];
-    if (file) toast('Escaneo en desarrollo — ingresa los datos manualmente', 'info');
+    if (!file) return;
+    if (typeof Tesseract === 'undefined') return toast('No se pudo cargar el lector OCR (revisa tu conexión)', 'error');
+    document.getElementById('boletaPreview').innerHTML = '';
+    document.getElementById('boletaRotar').style.display = 'none';
+    try {
+        setBoletaProgress('<span style="color:#6c757d;font-size:13px;">📂 Cargando imagen…</span>');
+        boletaImg = await fileToImage(file);
+        setBoletaProgress('<span style="color:#6c757d;font-size:13px;">🧭 Detectando orientación…</span>');
+        boletaRot = await detectarRotacion(boletaImg);
+        await leerBoleta();
+    } catch (e) {
+        console.error('Boleta OCR error:', e);
+        setBoletaProgress('');
+        toast('No se pudo leer la boleta', 'error');
+    }
+}
+
+// OCR completo con la rotación actual → parse → preview
+async function leerBoleta() {
+    if (!boletaImg) return;
+    const canvas = prepararCanvas(boletaImg, boletaRot, 2200);
+    setBoletaProgress(barraProgreso(0));
+    const data = await ocrCanvas(canvas, p => setBoletaProgress(barraProgreso(p)));
+    setBoletaProgress('');
+    document.getElementById('boletaRotar').style.display = 'inline-block';
+    boletaParsed = parseBoleta(data.text);
+    renderBoletaPreview();
+}
+
+function rotarBoleta() {
+    if (!boletaImg) return;
+    boletaRot = (boletaRot + 90) % 360;
+    document.getElementById('boletaPreview').innerHTML = '';
+    leerBoleta().catch(e => { console.error(e); toast('Error al releer', 'error'); });
+}
+
+// número chileno → entero (6.790 → 6790, -1.800 → -1800)
+function parseMontoCL(s) {
+    const neg = /-/.test(s);
+    const n = parseInt(s.replace(/[^\d]/g, ''), 10);
+    if (isNaN(n)) return null;
+    return neg ? -n : n;
+}
+
+const BOLETA_IGNORAR  = /\b(rut|boleta|electronica|sii|cencosud|retail|s\.?a\.?|avenida|avda|av|kennedy|alcalde|infante|condes|poniente|direccion|metropolitana|maipu|sub\s*total|neto|iva|descuentos?|total|debito|credito|vuelto|puntos|nombre|saldo|esta\s+compra|revisa|www|condiciones|terminos|acumul)\b/i;
+const BOLETA_DESCUENTO = /(ofertas?|imbatible|descuento|promo|dcto)/i;
+
+// cantidad + unidad desde la descripción (750GR, 1KG, 12 UN…)
+function cantidadUnidadDesc(desc) {
+    const n = quitarAcentos(desc.toLowerCase());
+    let m;
+    if ((m = n.match(/(\d+(?:[.,]\d+)?)\s*kg\b/)))         return { cantidad: parseFloat(m[1].replace(',', '.')), unidad: 'kg' };
+    if ((m = n.match(/(\d+(?:[.,]\d+)?)\s*(?:gr|g)\b/)))   return { cantidad: parseFloat(m[1].replace(',', '.')), unidad: 'g' };
+    if ((m = n.match(/(\d+(?:[.,]\d+)?)\s*ml\b/)))         return { cantidad: parseFloat(m[1].replace(',', '.')), unidad: 'ml' };
+    if ((m = n.match(/(\d+(?:[.,]\d+)?)\s*l\b/)))          return { cantidad: parseFloat(m[1].replace(',', '.')), unidad: 'l' };
+    if ((m = n.match(/(\d+)\s*(?:un|u|uds?|unidades?)\b/))) return { cantidad: parseInt(m[1]), unidad: 'unidad' };
+    return { cantidad: 1, unidad: 'unidad' };
+}
+
+function limpiarNombreBoleta(desc) {
+    return desc
+        .replace(/\b\d+\s*(kg|gr|g|ml|l|un|u|uds?|unidades?)\b/gi, ' ') // tokens de tamaño
+        .replace(/\b\d{3,6}\b/g, ' ')   // números sueltos restantes
+        .replace(/[^\wáéíóúñÁÉÍÓÚÑ\s./%-]/g, ' ')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+}
+
+function aplicarDescuento(items, linea) {
+    const md = linea.match(/-\s*\d{1,3}(?:\.\d{3})*/);
+    if (md && items.length) {
+        const desc = Math.abs(parseMontoCL(md[0]));
+        const it = items[items.length - 1];
+        it.precio = Math.max(0, it.precio - desc);
+        it.descuento = (it.descuento || 0) + desc;
+    }
+}
+
+function parseBoleta(texto) {
+    const lineas = texto.split('\n').map(l => l.trim()).filter(Boolean);
+    const items = [];
+    for (const linea of lineas) {
+        // descuentos (aplican al último ítem)
+        if (BOLETA_DESCUENTO.test(linea)) { aplicarDescuento(items, linea); continue; }
+        if (BOLETA_IGNORAR.test(linea)) continue;
+
+        const eanM = linea.match(/\b(\d{12,13})\b/);
+        const ean = eanM ? eanM[1] : null;
+
+        // ítem válido solo si trae EAN o un precio con separador de miles (descarta
+        // direcciones/números de calle que no tienen ninguno)
+        const hayMiles = /-?\d{1,3}\.\d{3}\b/.test(ean ? linea.replace(ean, ' ') : linea);
+        if (!ean && !hayMiles) continue;
+
+        // candidatos a precio: montos con miles (6.790) o enteros 3-6 dígitos sueltos (844)
+        const precios = linea.match(/-?\d{1,3}(?:\.\d{3})+|\b\d{3,6}\b/g);
+        if (!precios) continue;
+        let precio = null;
+        for (let i = precios.length - 1; i >= 0; i--) {
+            if (ean && precios[i].replace(/[^\d]/g, '') === ean) continue;
+            const v = parseMontoCL(precios[i]);
+            if (v && v > 0 && v < 1000000) { precio = v; break; }
+        }
+        if (precio == null) continue;
+
+        // descripción: quitar EAN y montos con miles; extraer cantidad/unidad ANTES de limpiar
+        let desc = linea;
+        if (ean) desc = desc.replace(ean, ' ');
+        desc = desc.replace(/-?\d{1,3}(?:\.\d{3})+/g, ' ');
+        const { cantidad, unidad } = cantidadUnidadDesc(desc);
+        const nombre = limpiarNombreBoleta(desc);
+        if (nombre.length < 2) continue;
+
+        // match: EAN primero (indexador), luego nombre
+        let insumo = ean ? insumoPorBarras(ean) : null;
+        let matchSource = insumo ? 'ean' : null;
+        if (!insumo) { insumo = matchInsumo(nombre); if (insumo) matchSource = 'nombre'; }
+
+        items.push({ ean, nombreRaw: nombre, cantidad, unidad, precio, descuento: 0, fecha: hoyISO(), insumoId: insumo ? insumo.id : null, matchSource });
+    }
+    return items;
+}
+
+function badgeMatchBoleta(r) {
+    if (r.matchSource === 'ean')    return '<span style="background:#37b24d;color:#fff;font-size:10px;padding:3px 7px;border-radius:8px;white-space:nowrap;">✓ código</span>';
+    if (r.matchSource === 'nombre') return '<span style="background:#f59f00;color:#fff;font-size:10px;padding:3px 7px;border-radius:8px;white-space:nowrap;">por nombre</span>';
+    return '<span style="background:#adb5bd;color:#fff;font-size:10px;padding:3px 7px;border-radius:8px;white-space:nowrap;">nuevo</span>';
+}
+
+function renderBoletaPreview() {
+    const el = document.getElementById('boletaPreview');
+    if (!boletaParsed.length) {
+        el.innerHTML = '<p style="color:#dc3545;font-size:13px;">No se detectaron productos. Prueba "🔄 Rotar 90°" o sube una foto más nítida y plana.</p>';
+        return;
+    }
+    const total = boletaParsed.reduce((s, r) => s + (parseFloat(r.precio) || 0), 0);
+    el.innerHTML =
+        `<div style="font-size:13px;color:#495057;margin-bottom:10px;">🧾 <strong>${boletaParsed.length}</strong> productos detectados · total ${esc(currency)}${total.toLocaleString('es-CL')} — revisa, corrige y registra:</div>
+         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <label style="font-size:13px;color:#6c757d;">Fecha de compra</label>
+            <input type="date" id="boletaFecha" value="${boletaParsed[0] ? boletaParsed[0].fecha : hoyISO()}" onchange="boletaFechaTodos(this.value)" style="padding:6px 10px;border:2px solid #e9ecef;border-radius:8px;">
+         </div>` +
+        boletaParsed.map((r, i) => `
+        <div style="display:grid;grid-template-columns:auto 1.4fr 64px 80px 92px 1.3fr auto;gap:6px;align-items:center;margin-bottom:6px;">
+            <div title="${r.ean || 'sin código de barras'}">${badgeMatchBoleta(r)}</div>
+            <input type="text" value="${esc(r.nombreRaw || '')}" oninput="boletaEdit(${i},'nombreRaw',this.value)" onchange="boletaRematch(${i})" placeholder="Producto" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
+            <input type="number" value="${r.cantidad}" step="0.001" oninput="boletaEdit(${i},'cantidad',this.value)" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
+            <select onchange="boletaEdit(${i},'unidad',this.value)" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
+                ${['g', 'kg', 'ml', 'l', 'unidad'].map(u => `<option value="${u}" ${u === r.unidad ? 'selected' : ''}>${u}</option>`).join('')}
+            </select>
+            <input type="number" value="${r.precio}" step="1" oninput="boletaEdit(${i},'precio',this.value)" title="Precio total pagado" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
+            <select onchange="boletaEdit(${i},'insumoId',this.value)" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
+                <option value="__new__" ${!r.insumoId ? 'selected' : ''}>➕ Crear "${esc(r.nombreRaw)}"</option>
+                ${insumos.map(ins => `<option value="${ins.id}" ${ins.id === r.insumoId ? 'selected' : ''}>${esc(ins.nombre)}</option>`).join('')}
+            </select>
+            <button class="btn btn-danger btn-sm" onclick="boletaQuitar(${i})">✕</button>
+        </div>`).join('') +
+        `<p style="font-size:11px;color:#adb5bd;margin:8px 0;">Los productos nuevos se crean con su código de barras (EAN); los existentes quedan ligados a ese EAN para reconocerse solos en la próxima boleta.</p>
+         <button class="btn btn-success" style="margin-top:6px;" onclick="aplicarBoleta()">✓ Registrar ${boletaParsed.length} compras</button>`;
+}
+
+function boletaFechaTodos(v) { boletaParsed.forEach(r => r.fecha = v); }
+
+function boletaEdit(i, campo, valor) {
+    if (campo === 'cantidad' || campo === 'precio') boletaParsed[i][campo] = parseFloat(valor) || 0;
+    else if (campo === 'insumoId') boletaParsed[i].insumoId = (valor === '__new__') ? null : valor;
+    else boletaParsed[i][campo] = valor;
+}
+
+function boletaRematch(i) {
+    const r = boletaParsed[i];
+    let insumo = r.ean ? insumoPorBarras(r.ean) : null;
+    r.matchSource = insumo ? 'ean' : null;
+    if (!insumo) { insumo = matchInsumo((r.nombreRaw || '').trim()); if (insumo) r.matchSource = 'nombre'; }
+    r.insumoId = insumo ? insumo.id : null;
+    renderBoletaPreview();
+}
+
+function boletaQuitar(i) { boletaParsed.splice(i, 1); renderBoletaPreview(); }
+
+async function aplicarBoleta() {
+    if (!boletaParsed.length) return;
+    if (!(await confirmar(`¿Registrar ${boletaParsed.length} compras de la boleta?`))) return;
+    const nuevos = {}; // clave (ean|nombre) → id, evita duplicar creaciones
+    let ok = 0;
+    for (const r of boletaParsed) {
+        if (!r.cantidad || !r.precio) continue;
+        let insumoId = r.insumoId;
+        if (!insumoId) {
+            const clave = (r.ean || r.nombreRaw.toLowerCase());
+            if (nuevos[clave]) insumoId = nuevos[clave];
+            else {
+                const codigo = sugerirCodigo(r.nombreRaw);
+                const datos = { codigo, nombre: r.nombreRaw, codigosBarras: r.ean ? [r.ean] : [], precio: null, unidadBase: null, fechaCreacion: new Date().toISOString() };
+                const ref = await addDoc(collection(db, 'insumos'), datos);
+                insumos.push({ id: ref.id, ...datos });
+                insumoId = ref.id;
+                nuevos[clave] = insumoId;
+            }
+        } else if (r.ean) {
+            // auto-indexar: ligar EAN al insumo existente si aún no lo tiene
+            const ins = insumos.find(x => x.id === insumoId);
+            if (ins && !(ins.codigosBarras || []).includes(r.ean) && !barrasDuplicado(r.ean, insumoId)) {
+                const nb = [...(ins.codigosBarras || []), r.ean];
+                await updateDoc(doc(db, 'insumos', insumoId), { codigosBarras: nb });
+                ins.codigosBarras = nb;
+            }
+        }
+        await registrarCompraCore(insumoId, r.cantidad, r.unidad, r.precio, r.fecha || hoyISO());
+        ok++;
+    }
+    boletaParsed = [];
+    boletaImg = null; boletaRot = 0;
+    document.getElementById('boletaPreview').innerHTML = '';
+    document.getElementById('boletaProgress').innerHTML = '';
+    document.getElementById('boletaRotar').style.display = 'none';
+    const fi = document.getElementById('boletaFile'); if (fi) fi.value = '';
+    renderCompras(); renderInsumos(); renderBarras(); actualizarSelects(); actualizarContadores(); calcularPrecio(); renderRecetas();
+    toast(`${ok} compras registradas desde la boleta`);
 }
 
 // ── Recetas ───────────────────────────────────────────────────
@@ -1162,6 +1465,12 @@ window.filtrarSugeridos    = filtrarSugeridos;
 window.mostrarSugeridos    = mostrarSugeridos;
 window.seleccionarSugerido = seleccionarSugerido;
 window.procesarBoleta      = procesarBoleta;
+window.rotarBoleta         = rotarBoleta;
+window.boletaEdit          = boletaEdit;
+window.boletaRematch       = boletaRematch;
+window.boletaQuitar        = boletaQuitar;
+window.boletaFechaTodos    = boletaFechaTodos;
+window.aplicarBoleta       = aplicarBoleta;
 window.agregarCompra       = agregarCompra;
 window.eliminarCompra      = eliminarCompra;
 window.agregarIngrediente  = agregarIngrediente;
