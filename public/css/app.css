@@ -92,8 +92,9 @@ body {
     cursor: pointer;
     border: 2px solid #e9ecef;
     transition: all 0.22s;
-    height: 280px;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .nav-card:hover {
@@ -102,16 +103,16 @@ body {
     border-color: #4fa8d8;
 }
 
-/* imagen abarca toda la card */
+/* imagen cuadrada que abarca el ancho de la card */
 .nav-card .nc-icon {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 78px;
+    width: 100%;
+    aspect-ratio: 1 / 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 14px;
+    padding: 16px;
 }
-.nav-card .nc-icon img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.nav-card .nc-icon img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
 
 /* badge contador */
 .nav-card .nc-count {
@@ -135,17 +136,14 @@ body {
 
 /* recuadro leyenda */
 .nav-card .nc-caption {
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    height: 78px;
     background: rgba(255,255,255,.94);
-    backdrop-filter: blur(6px);
     border-top: 1px solid rgba(0,0,0,.06);
     padding: 14px 18px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     text-align: left;
+    margin-top: auto;
 }
 .nav-card .nc-title { font-weight: 800; color: #343a40; font-size: 20px; }
 .nav-card .nc-sub { font-size: 13px; color: #adb5bd; margin-top: 2px; }
@@ -627,7 +625,7 @@ th { background: #f8f9fa; font-weight: 600; color: #495057; }
     .header { padding: 0; }
     .content   { padding: 16px; }
     #dashboard { gap: 14px; padding: 16px; }
-    .nav-card  { height: 240px; padding: 0; }
+    .nav-card  { padding: 0; }
     .nav-card .nc-title { font-size: 18px; }
 
     .grid-insumos, .grid-barras-mod, .grid-compras,
