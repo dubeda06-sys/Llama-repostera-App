@@ -85,35 +85,70 @@ body {
 }
 
 .nav-card {
-    background: #f8f9fa;
+    position: relative;
+    background: linear-gradient(160deg, #eaf6fc 0%, #f8f9fa 100%);
     border-radius: 18px;
-    padding: 22px 26px;
+    padding: 0;
     cursor: pointer;
     border: 2px solid #e9ecef;
     transition: all 0.22s;
-    display: grid;
-    grid-template-columns: 120px 1fr;
-    grid-template-areas:
-        "icon count"
-        "icon title"
-        "icon sub";
-    align-items: center;
-    column-gap: 20px;
-    text-align: left;
+    height: 280px;
+    overflow: hidden;
 }
 
 .nav-card:hover {
     transform: translateY(-6px);
     box-shadow: 0 12px 32px rgba(0,0,0,0.13);
     border-color: #4fa8d8;
-    background: white;
 }
 
-.nav-card .nc-icon { grid-area: icon; align-self: center; }
-.nav-card .nc-icon img { width: 120px; height: 120px; object-fit: contain; display: block; }
-.nav-card .nc-count { grid-area: count; font-size: 2.2em; font-weight: 800; color: #4fa8d8; line-height: 1; align-self: end; }
-.nav-card .nc-title { grid-area: title; font-weight: 700; color: #343a40; font-size: 19px; margin-top: 4px; }
-.nav-card .nc-sub { grid-area: sub; font-size: 12px; color: #adb5bd; margin-top: 2px; }
+/* imagen abarca toda la card */
+.nav-card .nc-icon {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 78px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+}
+.nav-card .nc-icon img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+/* badge contador */
+.nav-card .nc-count {
+    position: absolute;
+    top: 12px; right: 12px;
+    z-index: 2;
+    background: #4fa8d8;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    line-height: 1;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,.18);
+}
+
+/* recuadro leyenda */
+.nav-card .nc-caption {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 78px;
+    background: rgba(255,255,255,.94);
+    backdrop-filter: blur(6px);
+    border-top: 1px solid rgba(0,0,0,.06);
+    padding: 14px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+}
+.nav-card .nc-title { font-weight: 800; color: #343a40; font-size: 20px; }
+.nav-card .nc-sub { font-size: 13px; color: #adb5bd; margin-top: 2px; }
 
 /* Sections */
 .content { padding: 30px; display: none; }
@@ -592,10 +627,8 @@ th { background: #f8f9fa; font-weight: 600; color: #495057; }
     .header { padding: 0; }
     .content   { padding: 16px; }
     #dashboard { gap: 14px; padding: 16px; }
-    .nav-card  { padding: 18px 18px; grid-template-columns: 90px 1fr; column-gap: 16px; }
-    .nav-card .nc-icon img { width: 90px; height: 90px; }
-    .nav-card .nc-count { font-size: 1.8em; }
-    .nav-card .nc-title { font-size: 17px; }
+    .nav-card  { height: 240px; padding: 0; }
+    .nav-card .nc-title { font-size: 18px; }
 
     .grid-insumos, .grid-barras-mod, .grid-compras,
     .grid-receta-top, .grid-ingrediente, .grid-config-2 {
