@@ -1,5 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, collection, getDocs, addDoc, deleteDoc, updateDoc, doc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyCiRD6oqLCxcqf8jNL5lf2CJVqzslpYIsE",
@@ -12,6 +13,8 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
+const auth = getAuth(firebaseApp);
+const googleProvider = new GoogleAuthProvider();
 
 // ── Estado local ──────────────────────────────────────────────
 let insumos = [], compras = [], recetas = [];
@@ -19,6 +22,27 @@ let ingredientesTemp = [];
 let editingId = null;
 let editandoRecetaId = null;
 let editIngredientes  = [];
+
+// ── XSS escape ───────────────────────────────────────────────
+function esc(s) {
+    if (s == null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+}
+
+// ── Auth ─────────────────────────────────────────────────────
+function signInGoogle() {
+    signInWithPopup(auth, googleProvider)
+        .catch(err => toast('Error al iniciar sesión: ' + err.message, 'error'));
+}
+
+function logout() {
+    signOut(auth).then(() => { insumos = []; compras = []; recetas = []; });
+}
 
 // ── Toast ────────────────────────────────────────────────────
 function toast(msg, tipo = 'ok') {
@@ -97,10 +121,6 @@ function autoCodigo() {
     // solo autosugerir si el usuario no escribió un código manual
     if (!cod.dataset.manual) cod.value = nombre ? sugerirCodigo(nombre) : '';
 }
-document.addEventListener('DOMContentLoaded', () => {
-    const cod = document.getElementById('insumoCodigo');
-    if (cod) cod.addEventListener('input', () => { cod.dataset.manual = cod.value ? '1' : ''; });
-});
 
 // ── Ingredientes sugeridos ────────────────────────────────────
 const SUGERIDOS = [
@@ -232,9 +252,9 @@ function renderInsumos() {
                 <div class="insumo-info">
                     <span class="insumo-emoji">${emoji}</span>
                     <div class="insumo-details">
-                        <h3><span class="codigo-tag">${codigo}</span> ${ins.nombre}${barrasHtml}</h3>
+                        <h3><span class="codigo-tag">${esc(codigo)}</span> ${esc(ins.nombre)}${barrasHtml}</h3>
                         <p>${tieneprecio
-                            ? `<span class="price-tag">${currency}${ins.precio.toFixed(2)}/${ins.unidadBase}</span>`
+                            ? `<span class="price-tag">${esc(currency)}${ins.precio.toFixed(2)}/${esc(ins.unidadBase)}</span>`
                             : `<span style="color:#adb5bd;font-size:12px;">Sin precio — registra una compra</span>`}
                         </p>
                     </div>
@@ -246,13 +266,13 @@ function renderInsumos() {
             </div>
             <div class="insumo-card-edit" id="edit-${ins.id}">
                 <div class="edit-row">
-                    <input type="text" id="eCodigo-${ins.id}" value="${ins.codigo || ''}" placeholder="Código" maxlength="12">
-                    <input type="text" id="eNombre-${ins.id}" value="${ins.nombre}" placeholder="Nombre">
+                    <input type="text" id="eCodigo-${ins.id}" value="${esc(ins.codigo || '')}" placeholder="Código" maxlength="12">
+                    <input type="text" id="eNombre-${ins.id}" value="${esc(ins.nombre)}" placeholder="Nombre">
                     <input type="number" id="ePrecio-${ins.id}" value="${tieneprecio ? ins.precio : ''}" placeholder="Precio manual" step="0.01" min="0" style="width:110px;">
                     <button class="btn btn-success btn-sm" onclick="guardarEdicion('${ins.id}')">✓</button>
                     <button class="btn btn-edit btn-sm" onclick="cancelarEdicion('${ins.id}')">✕</button>
                 </div>
-                ${barras.length ? `<div style="margin-top:8px;">${barras.map(b => `<span class="barcode-chip">${b}</span>`).join('')}<span style="font-size:11px; color:#adb5bd; margin-left:6px;">(edita códigos en el módulo 🔖)</span></div>` : ''}
+                ${barras.length ? `<div style="margin-top:8px;">${barras.map(b => `<span class="barcode-chip">${esc(b)}</span>`).join('')}<span style="font-size:11px; color:#adb5bd; margin-left:6px;">(edita códigos en el módulo 🔖)</span></div>` : ''}
             </div>
         </div>`;
     }).join('');
@@ -345,7 +365,7 @@ function lookupBarras(codigo) {
     if (!codigo) { out.innerHTML = ''; return; }
     const ins = insumoPorBarras(codigo);
     if (ins) {
-        out.innerHTML = `<span style="color:#28a745;">✓ Ya ligado a <strong>${ins.nombre}</strong> ${ins.codigo ? '['+ins.codigo+']' : ''}</span>`;
+        out.innerHTML = `<span style="color:#28a745;">✓ Ya ligado a <strong>${esc(ins.nombre)}</strong> ${ins.codigo ? '['+esc(ins.codigo)+']' : ''}</span>`;
     } else {
         out.innerHTML = `<span style="color:#6c757d;">Código nuevo — elige un producto y presiona Ligar</span>`;
     }
@@ -392,12 +412,12 @@ function renderBarras() {
     el.innerHTML = conBarras.map(ins => `
         <div class="barras-row">
             <div>
-                <strong style="font-size:14px;">${getEmoji(ins.nombre)} ${ins.nombre}</strong>
-                ${ins.codigo ? `<span class="codigo-tag" style="margin-left:6px;">${ins.codigo}</span>` : ''}
+                <strong style="font-size:14px;">${getEmoji(ins.nombre)} ${esc(ins.nombre)}</strong>
+                ${ins.codigo ? `<span class="codigo-tag" style="margin-left:6px;">${esc(ins.codigo)}</span>` : ''}
                 <div style="margin-top:6px;">
                     ${ins.codigosBarras.map(b => `
-                        <span class="barcode-chip">${b}
-                            <button onclick="eliminarBarras('${ins.id}','${b}')" title="Quitar">✕</button>
+                        <span class="barcode-chip">${esc(b)}
+                            <button onclick="eliminarBarras('${ins.id}',${JSON.stringify(b)})" title="Quitar">✕</button>
                         </span>`).join('')}
                 </div>
             </div>
@@ -462,9 +482,9 @@ function renderCompras() {
         const ins = insumos.find(i => i.id === c.insumoId);
         return `<tr>
             <td>${new Date(c.fecha + 'T00:00').toLocaleDateString()}</td>
-            <td>${ins ? ins.nombre : 'N/A'}</td>
-            <td>${c.cantidad} ${c.unidad || (ins ? ins.unidad : '')}</td>
-            <td>${currency}${parseFloat(c.precio).toFixed(2)}</td>
+            <td>${ins ? esc(ins.nombre) : 'N/A'}</td>
+            <td>${c.cantidad} ${esc(c.unidad || (ins ? ins.unidad : ''))}</td>
+            <td>${esc(currency)}${parseFloat(c.precio).toFixed(2)}</td>
             <td><button class="btn btn-danger btn-sm" onclick="eliminarCompra('${c.id}')">🗑️</button></td>
         </tr>`;
     }).join('')}
@@ -538,7 +558,7 @@ function renderRecetas() {
             const ingHtml = editIngredientes.length
                 ? editIngredientes.map((ing, idx) => `
                     <div class="ingredient-item">
-                        <span><strong>${ing.nombre}</strong> — ${ing.cantidad} ${ing.unidad}</span>
+                        <span><strong>${esc(ing.nombre)}</strong> — ${ing.cantidad} ${esc(ing.unidad)}</span>
                         <button class="btn btn-danger btn-sm" onclick="editQuitarIngrediente(${idx})">✕</button>
                     </div>`).join('')
                 : '<p style="color:#adb5bd; font-size:13px; padding:6px 0;">Sin ingredientes</p>';
@@ -548,7 +568,7 @@ function renderRecetas() {
                 <div class="grid-receta-top" style="margin-bottom:14px;">
                     <div>
                         <label>Nombre de la receta</label>
-                        <input type="text" id="editRecetaNombre" value="${r.nombre.replace(/"/g,'&quot;')}" placeholder="Nombre">
+                        <input type="text" id="editRecetaNombre" value="${esc(r.nombre)}" placeholder="Nombre">
                     </div>
                     <div>
                         <label>Porciones</label>
@@ -563,7 +583,7 @@ function renderRecetas() {
                             <label style="font-size:12px;">Insumo</label>
                             <select id="editIngInsumo" onchange="editActualizarUnidad()">
                                 <option value="">Selecciona</option>
-                                ${insumos.map(i => `<option value="${i.id}">${i.codigo ? '['+i.codigo+'] ' : ''}${i.nombre}</option>`).join('')}
+                                ${insumos.map(i => `<option value="${i.id}">${i.codigo ? '['+esc(i.codigo)+'] ' : ''}${esc(i.nombre)}</option>`).join('')}
                             </select>
                         </div>
                         <div>
@@ -590,9 +610,9 @@ function renderRecetas() {
         return `<div style="background:#f8f9fa; border-radius:14px; padding:18px; margin-bottom:12px; border-left:4px solid #667eea;">
             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                 <div style="flex:1; min-width:0;">
-                    <h3 style="color:#343a40;">${r.nombre}</h3>
+                    <h3 style="color:#343a40;">${esc(r.nombre)}</h3>
                     <p style="color:#6c757d; font-size:13px; margin-top:4px;">${r.porciones} porciones · ${r.ingredientes.length} ingredientes</p>
-                    <span class="price-tag" style="margin-top:8px; display:inline-block;">Costo: ${currency}${costo.toFixed(2)}</span>
+                    <span class="price-tag" style="margin-top:8px; display:inline-block;">Costo: ${esc(currency)}${costo.toFixed(2)}</span>
                     ${avisoHtml}
                 </div>
                 <div style="display:flex; gap:8px; margin-left:12px; flex-shrink:0;">
@@ -637,7 +657,7 @@ function renderIngredientesTemp() {
     if (!ingredientesTemp.length) { el.innerHTML = ''; return; }
     el.innerHTML = ingredientesTemp.map((ing, i) => `
         <div class="ingredient-item">
-            <span><strong>${ing.nombre}</strong> — ${ing.cantidad} ${ing.unidad}</span>
+            <span><strong>${esc(ing.nombre)}</strong> — ${ing.cantidad} ${esc(ing.unidad)}</span>
             <button class="btn btn-danger btn-sm" onclick="eliminarIngredienteTemp(${i})">✕</button>
         </div>
     `).join('');
@@ -817,12 +837,12 @@ function renderImportPreview() {
         return;
     }
     const cabecera = (importNombre || importPorciones)
-        ? `<div style="font-size:13px; color:#495057; margin-bottom:8px;">${importNombre ? '📌 <strong>'+importNombre+'</strong>' : ''} ${importPorciones ? '· '+importPorciones+' porciones' : ''}</div>`
+        ? `<div style="font-size:13px; color:#495057; margin-bottom:8px;">${importNombre ? '📌 <strong>'+esc(importNombre)+'</strong>' : ''} ${importPorciones ? '· '+importPorciones+' porciones' : ''}</div>`
         : '';
     el.innerHTML = cabecera + `<div style="font-size:13px; color:#6c757d; margin-bottom:8px;">${importParsed.length} ingredientes — revisa, corrige el texto y ajusta:</div>` +
         importParsed.map((r, i) => `
         <div style="display:grid; grid-template-columns:1.3fr 70px 80px 1.2fr auto; gap:8px; align-items:center; margin-bottom:6px;">
-            <input type="text" value="${(r.nombreRaw || '').replace(/"/g,'&quot;')}" placeholder="Nombre"
+            <input type="text" value="${esc(r.nombreRaw || '')}" placeholder="Nombre"
                 oninput="importEdit(${i},'nombreRaw',this.value)" onchange="importRematch(${i})"
                 style="padding:7px; border:2px solid #e9ecef; border-radius:8px;">
             <input type="number" value="${r.cantidad}" step="0.01" oninput="importEdit(${i},'cantidad',this.value)" style="padding:7px; border:2px solid #e9ecef; border-radius:8px;">
@@ -830,8 +850,8 @@ function renderImportPreview() {
                 ${['g','kg','ml','l','unidad'].map(u => `<option value="${u}" ${u===r.unidad?'selected':''}>${u}</option>`).join('')}
             </select>
             <select onchange="importEdit(${i},'insumoId',this.value)" style="padding:7px; border:2px solid #e9ecef; border-radius:8px;">
-                <option value="__new__" ${!r.insumoId?'selected':''}>➕ Crear "${r.nombreRaw}"</option>
-                ${insumos.map(ins => `<option value="${ins.id}" ${ins.id===r.insumoId?'selected':''}>${ins.nombre}</option>`).join('')}
+                <option value="__new__" ${!r.insumoId?'selected':''}>➕ Crear "${esc(r.nombreRaw)}"</option>
+                ${insumos.map(ins => `<option value="${ins.id}" ${ins.id===r.insumoId?'selected':''}>${esc(ins.nombre)}</option>`).join('')}
             </select>
             <button class="btn btn-danger btn-sm" onclick="importQuitar(${i})">✕</button>
         </div>`).join('') +
@@ -918,9 +938,9 @@ function avisosReceta(receta) {
     const av = [];
     receta.ingredientes.forEach(ing => {
         const ins = insumos.find(i => i.id === ing.insumoId);
-        if (!ins) { av.push(`${ing.nombre}: insumo eliminado`); return; }
-        if (ins.precio == null) av.push(`${ing.nombre}: sin precio`);
-        else if (ins.unidadBase && FAMILY[ing.unidad] !== FAMILY[ins.unidadBase]) av.push(`${ing.nombre}: unidad incompatible (${ing.unidad} vs ${ins.unidadBase})`);
+        if (!ins) { av.push(`${esc(ing.nombre)}: insumo eliminado`); return; }
+        if (ins.precio == null) av.push(`${esc(ing.nombre)}: sin precio`);
+        else if (ins.unidadBase && FAMILY[ing.unidad] !== FAMILY[ins.unidadBase]) av.push(`${esc(ing.nombre)}: unidad incompatible (${esc(ing.unidad)} vs ${esc(ins.unidadBase)})`);
     });
     return av;
 }
@@ -972,7 +992,7 @@ function calcularPrecio() {
         ? `<div style="background:#fff3cd; color:#856404; padding:12px 16px; border-radius:10px; margin-bottom:14px; font-size:13px;">⚠️ Costo incompleto — ${avisos.join(' · ')}</div>`
         : '';
 
-    const row = (label, val, extra='') => `<div class="cost-item"><span>${label}</span><span>${currency}${val.toFixed(2)}${extra}</span></div>`;
+    const row = (label, val, extra='') => `<div class="cost-item"><span>${label}</span><span>${esc(currency)}${val.toFixed(2)}${extra}</span></div>`;
 
     // comparación competencia
     let compHtml = '';
@@ -980,14 +1000,14 @@ function calcularPrecio() {
         const costoUnit = conMerma / porciones;
         let msg, color;
         if (competencia < costoUnit) {
-            msg = `⚠️ La competencia (${currency}${competencia.toFixed(2)}) cobra MENOS que tu costo (${currency}${costoUnit.toFixed(2)}). Revisa tus costos o no entres a ese precio.`;
+            msg = `⚠️ La competencia (${esc(currency)}${competencia.toFixed(2)}) cobra MENOS que tu costo (${esc(currency)}${costoUnit.toFixed(2)}). Revisa tus costos o no entres a ese precio.`;
             color = '#dc3545';
         } else if (competencia < porPorcion) {
             const sugMargen = ((competencia / costoUnit) - 1) * 100;
-            msg = `ℹ️ Tu sugerido (${currency}${porPorcion.toFixed(2)}) está sobre la competencia (${currency}${competencia.toFixed(2)}). Aún ganas: a precio competencia tu margen sería ~${sugMargen.toFixed(0)}%.`;
+            msg = `ℹ️ Tu sugerido (${esc(currency)}${porPorcion.toFixed(2)}) está sobre la competencia (${esc(currency)}${competencia.toFixed(2)}). Aún ganas: a precio competencia tu margen sería ~${sugMargen.toFixed(0)}%.`;
             color = '#fd7e14';
         } else {
-            msg = `✓ Tu sugerido (${currency}${porPorcion.toFixed(2)}) está bajo la competencia (${currency}${competencia.toFixed(2)}). Margen para subir precio.`;
+            msg = `✓ Tu sugerido (${esc(currency)}${porPorcion.toFixed(2)}) está bajo la competencia (${esc(currency)}${competencia.toFixed(2)}). Margen para subir precio.`;
             color = '#28a745';
         }
         compHtml = `<div style="background:white; border:2px solid ${color}; color:${color}; padding:12px 16px; border-radius:10px; margin-top:14px; font-size:13px;">${msg}</div>`;
@@ -995,20 +1015,20 @@ function calcularPrecio() {
 
     el.innerHTML = avisoHtml + `
         <div class="cost-summary">
-            <h3>💰 ${receta.nombre}</h3>
+            <h3>💰 ${esc(receta.nombre)}</h3>
             ${row('🥣 Materia prima', materiaPrima)}
             ${row('👩‍🍳 Mano de obra', manoObra, horas ? ` <small>(${horas}h)</small>` : '')}
             ${row('📦 Empaque', empaque)}
             ${row('⚡ Indirectos', indirectos)}
-            <div class="cost-item"><span>Subtotal</span><span>${currency}${costoBase.toFixed(2)}</span></div>
+            <div class="cost-item"><span>Subtotal</span><span>${esc(currency)}${costoBase.toFixed(2)}</span></div>
             ${merma ? row(`🗑️ Merma (${merma}%)`, conMerma - costoBase) : ''}
-            <div class="cost-item total-cost"><span>Costo real</span><span>${currency}${conMerma.toFixed(2)}</span></div>
+            <div class="cost-item total-cost"><span>Costo real</span><span>${esc(currency)}${conMerma.toFixed(2)}</span></div>
             ${row(`📈 Ganancia (${margen}%)`, gananciaNeta)}
             <div class="cost-item"><span>Porciones</span><span>${porciones}</span></div>
         </div>
         <div class="profit-result" style="margin-top:16px;">
-            Precio de venta: ${currency}${precioVenta.toFixed(2)}
-            <br><small style="font-weight:400;">Por porción: ${currency}${porPorcion.toFixed(2)}</small>
+            Precio de venta: ${esc(currency)}${precioVenta.toFixed(2)}
+            <br><small style="font-weight:400;">Por porción: ${esc(currency)}${porPorcion.toFixed(2)}</small>
         </div>` + compHtml;
 }
 
@@ -1035,12 +1055,12 @@ async function guardarCostosReceta() {
 // ── Selects y contadores ──────────────────────────────────────
 function actualizarSelects() {
     const opts = '<option value="">Selecciona un insumo</option>' +
-        insumos.map(i => `<option value="${i.id}">${i.codigo ? '['+i.codigo+'] ' : ''}${i.nombre}${i.unidadBase ? ' ('+i.unidadBase+')' : ''}</option>`).join('');
+        insumos.map(i => `<option value="${i.id}">${i.codigo ? '['+esc(i.codigo)+'] ' : ''}${esc(i.nombre)}${i.unidadBase ? ' ('+esc(i.unidadBase)+')' : ''}</option>`).join('');
     document.getElementById('compraInsumo').innerHTML = opts;
     document.getElementById('ingredienteInsumo').innerHTML = opts;
     const barrasSel = document.getElementById('barrasInsumo');
     if (barrasSel) barrasSel.innerHTML = '<option value="">Selecciona un insumo</option>' +
-        insumos.map(i => `<option value="${i.id}">${i.codigo ? '['+i.codigo+'] ' : ''}${i.nombre}</option>`).join('');
+        insumos.map(i => `<option value="${i.id}">${i.codigo ? '['+esc(i.codigo)+'] ' : ''}${esc(i.nombre)}</option>`).join('');
     actualizarUnidadIngrediente();
     actualizarCalcSelect();
 }
@@ -1048,7 +1068,7 @@ function actualizarSelects() {
 function actualizarCalcSelect() {
     document.getElementById('calcReceta').innerHTML =
         '<option value="">Selecciona una receta</option>' +
-        recetas.map(r => `<option value="${r.id}">${r.nombre}</option>`).join('');
+        recetas.map(r => `<option value="${r.id}">${esc(r.nombre)}</option>`).join('');
 }
 
 function actualizarContadores() {
@@ -1091,7 +1111,28 @@ function cargarConfigEnUI() {
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('compraFecha').valueAsDate = new Date();
     cargarConfigEnUI();
-    cargarTodo();
+
+    const cod = document.getElementById('insumoCodigo');
+    if (cod) cod.addEventListener('input', () => { cod.dataset.manual = cod.value ? '1' : ''; });
+
+    onAuthStateChanged(auth, user => {
+        const loginScreen = document.getElementById('loginScreen');
+        const appRoot     = document.getElementById('appRoot');
+        const userInfo    = document.getElementById('userInfo');
+        const userName    = document.getElementById('userName');
+        if (user) {
+            loginScreen.style.display = 'none';
+            appRoot.style.display     = 'block';
+            userInfo.style.display    = 'flex';
+            if (userName) userName.textContent = user.displayName || user.email || '';
+            cargarTodo();
+        } else {
+            loginScreen.style.display = 'flex';
+            appRoot.style.display     = 'none';
+            userInfo.style.display    = 'none';
+            insumos = []; compras = []; recetas = [];
+        }
+    });
 });
 
 // ── Window exports ────────────────────────────────────────────
@@ -1135,3 +1176,5 @@ window.calcularPrecio      = calcularPrecio;
 window.abrirRecetaEnCalc   = abrirRecetaEnCalc;
 window.guardarCostosReceta = guardarCostosReceta;
 window.guardarConfig       = guardarConfig;
+window.signInGoogle        = signInGoogle;
+window.logout              = logout;
