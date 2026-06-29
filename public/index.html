@@ -36,7 +36,10 @@
         <!-- Dashboard: 4 nav cards -->
         <div id="dashboard">
             <div class="nav-card" onclick="openSection('insumos')">
-                <div class="nc-icon"><img src="img/insumos.png" alt="Insumos"></div>
+                <div class="nc-icon"><div class="logo-stack" data-anim="insumos">
+                    <img class="lyr lyr-base" src="img/anim/insumos/escena.png" alt="Insumos">
+                    <img class="lyr lyr-clip" src="img/anim/insumos/clipboard.png" alt="">
+                </div></div>
                 <div class="nc-count" id="countInsumos">0</div>
                 <div class="nc-caption">
                     <div class="nc-title">Insumos</div>
@@ -44,7 +47,10 @@
                 </div>
             </div>
             <div class="nav-card" onclick="openSection('compras')">
-                <div class="nc-icon"><img src="img/compras.png" alt="Compras"></div>
+                <div class="nc-icon"><div class="logo-stack" data-anim="compras">
+                    <img class="lyr lyr-base"  src="img/anim/compras/llama.png" alt="Compras">
+                    <img class="lyr lyr-carro" src="img/anim/compras/carro.png" alt="">
+                </div></div>
                 <div class="nc-count" id="countCompras">0</div>
                 <div class="nc-caption">
                     <div class="nc-title">Compras</div>
@@ -52,7 +58,10 @@
                 </div>
             </div>
             <div class="nav-card" onclick="openSection('recetas')">
-                <div class="nc-icon"><img src="img/recetas.png" alt="Recetas"></div>
+                <div class="nc-icon"><div class="logo-stack" data-anim="recetas">
+                    <img class="lyr lyr-base" src="img/anim/recetas/llama.png" alt="Recetas">
+                    <img class="lyr lyr-bowl" src="img/anim/recetas/bowl.png" alt="">
+                </div></div>
                 <div class="nc-count" id="countRecetas">0</div>
                 <div class="nc-caption">
                     <div class="nc-title">Recetas</div>
@@ -60,7 +69,10 @@
                 </div>
             </div>
             <div class="nav-card" onclick="openSection('calculadora')">
-                <div class="nc-icon"><img src="img/calculadora.png" alt="Calculadora"></div>
+                <div class="nc-icon"><div class="logo-stack" data-anim="calculadora">
+                    <img class="lyr lyr-base" src="img/anim/calculadora/escena.png" alt="Calculadora">
+                    <img class="lyr lyr-calc" src="img/anim/calculadora/calc.png" alt="">
+                </div></div>
                 <div class="nc-count">→</div>
                 <div class="nc-caption">
                     <div class="nc-title">Calculadora</div>
@@ -265,8 +277,11 @@
                 </div>
 
                 <div id="calcInputs" style="display:none;">
-                    <div style="background:#f8f9fa; padding:18px; border-radius:14px; margin-bottom:16px;">
-                        <h4 style="margin-bottom:14px; color:#495057;">Costos de esta receta</h4>
+                    <div id="resultadoCalculo"></div>
+
+                    <details class="calc-editor">
+                        <summary>⚙️ Ajustar costos de esta receta</summary>
+                        <div class="calc-editor-body">
                         <div class="grid-config-2">
                             <div>
                                 <label>Horas de trabajo</label>
@@ -296,10 +311,9 @@
                         <p style="font-size:12px; color:#adb5bd; margin-top:10px;">Tarifa por hora se toma de ⚙️ Configuración. Estos valores arrancan con tus defaults; puedes guardarlos en la receta.</p>
                         <button class="btn btn-success btn-sm" style="margin-top:10px;" onclick="guardarCostosReceta()">💾 Guardar costos en receta</button>
                         <span id="calcGuardadoMsg" style="color:#28a745; font-size:13px; margin-left:10px; display:none;">✓ Guardado</span>
-                    </div>
+                        </div>
+                    </details>
                 </div>
-
-                <div id="resultadoCalculo"></div>
             </div>
 
             <!-- CONFIGURACIÓN -->

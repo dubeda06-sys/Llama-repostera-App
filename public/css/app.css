@@ -134,25 +134,89 @@ body {
     justify-content: center;
     padding: 14px;
 }
-.nav-card .nc-icon img {
+/* stack de capas: cada logo se compone de PNGs transparentes apilados.
+   el stack flota suave en reposo; al hover cada parte hace su cinemática. */
+.nav-card .nc-icon .logo-stack {
+    position: relative;
     height: 100%;
-    width: auto;
-    max-width: 100%;
+    aspect-ratio: 1 / 1;
+    animation: floatBob 3.5s ease-in-out infinite;
+}
+.nav-card .nc-icon .lyr {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
     display: block;
-    animation: floatBob 3.5s ease-in-out infinite;
-    transition: transform .3s ease;
-    transform-origin: center bottom;
+    transform-origin: center;
+    will-change: transform;
 }
 /* flotación escalonada por card */
-#dashboard .nav-card:nth-child(1) .nc-icon img { animation-delay: 0s; }
-#dashboard .nav-card:nth-child(2) .nc-icon img { animation-delay: .4s; }
-#dashboard .nav-card:nth-child(3) .nc-icon img { animation-delay: .8s; }
-#dashboard .nav-card:nth-child(4) .nc-icon img { animation-delay: 1.2s; }
+#dashboard .nav-card:nth-child(1) .logo-stack { animation-delay: 0s; }
+#dashboard .nav-card:nth-child(2) .logo-stack { animation-delay: .4s; }
+#dashboard .nav-card:nth-child(3) .logo-stack { animation-delay: .8s; }
+#dashboard .nav-card:nth-child(4) .logo-stack { animation-delay: 1.2s; }
 
-.nav-card:hover .nc-icon img {
-    animation: wiggle .6s ease-in-out;
-    transform: scale(1.08);
+/* ── cinemáticas por logo (una corrida ~1s al hover, vuelve a reposo) ── */
+
+/* recetas: el bowl se vuelca y la mezcla cae; la llama recula del susto */
+.nav-card:hover .lyr-bowl  { animation: bowlSpill 1s cubic-bezier(.34,1.3,.5,1) both; transform-origin: 60% 40%; }
+.nav-card:hover [data-anim="recetas"] .lyr-base { animation: llamaRecoil 1s ease both; transform-origin: 50% 90%; }
+
+/* compras: el carro rueda hacia adelante con rebote; la llama empuja */
+.nav-card:hover .lyr-carro { animation: cartRoll 1s ease-out both; transform-origin: 50% 100%; }
+.nav-card:hover [data-anim="compras"] .lyr-base { animation: cartPush 1s ease both; transform-origin: 60% 80%; }
+
+/* calculadora: teclea (press-bounce sobre la calculadora) */
+.nav-card:hover .lyr-calc  { animation: calcPress .8s ease both; transform-origin: 62% 70%; }
+
+/* insumos: tilda el clipboard (vaivén) */
+.nav-card:hover .lyr-clip  { animation: clipTick 1s ease both; transform-origin: 58% 46%; }
+
+@keyframes bowlSpill {
+    0%   { transform: rotate(0) translate(0,0); }
+    20%  { transform: rotate(-7deg) translateY(-2%); }
+    55%  { transform: rotate(22deg) translateY(5%); }
+    78%  { transform: rotate(15deg) translateY(2%); }
+    100% { transform: rotate(0) translate(0,0); }
+}
+@keyframes llamaRecoil {
+    0%, 100% { transform: rotate(0) translateX(0); }
+    45%      { transform: rotate(-3deg) translateX(-2%); }
+}
+@keyframes cartRoll {
+    0%   { transform: translateX(0) translateY(0) rotate(0); }
+    35%  { transform: translateX(3.5%) translateY(-1.2%) rotate(.8deg); }
+    60%  { transform: translateX(4.5%) translateY(0) rotate(0); }
+    100% { transform: translateX(0) translateY(0) rotate(0); }
+}
+@keyframes cartPush {
+    0%, 100% { transform: rotate(0) translateX(0); }
+    50%      { transform: rotate(1.5deg) translateX(3.5%); }
+}
+@keyframes calcPress {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(.955); }
+    65%  { transform: scale(1.03); }
+    100% { transform: scale(1); }
+}
+@keyframes clipTick {
+    0%   { transform: rotate(0); }
+    25%  { transform: rotate(-5deg); }
+    55%  { transform: rotate(3deg); }
+    80%  { transform: rotate(-1.5deg); }
+    100% { transform: rotate(0); }
+}
+
+/* accesibilidad: sin movimiento si el usuario lo pidió */
+@media (prefers-reduced-motion: reduce) {
+    .nav-card .nc-icon .logo-stack { animation: none; }
+    .nav-card:hover .lyr-bowl,
+    .nav-card:hover .lyr-carro,
+    .nav-card:hover .lyr-calc,
+    .nav-card:hover .lyr-clip,
+    .nav-card:hover .lyr-base { animation: none; }
 }
 
 /* badge contador */
