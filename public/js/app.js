@@ -543,7 +543,9 @@ async function eliminarCompra(id) {
 // ── Interpretador de boletas (OCR cliente con Tesseract.js) ───
 let boletaImg = null;   // HTMLImageElement original
 let boletaRot = 0;      // rotación aplicada (0/90/180/270)
+let boletaDeskew = 0;   // inclinación residual fina en grados (deskew)
 let boletaParsed = [];
+let boletaTotal = null; // TOTAL impreso en la boleta (para cuadre)
 
 function hoyISO() { return new Date().toISOString().slice(0, 10); }
 
@@ -574,10 +576,49 @@ function otsuThreshold(px) {
     return thr;
 }
 
-// dibuja la imagen rotada + grises + contraste + (opcional) binarización Otsu → canvas para OCR
+// umbral local de Sauvola sobre el canal gris (r=g=b) usando imágenes integrales (O(n)).
+// Mucho mejor que Otsu global en papel térmico con luz despareja (zonas quemadas/lavadas).
+//   T(x,y) = media * (1 + k * (std/128 - 1))
+function sauvolaBinarize(px, w, h, win = 15, k = 0.34) {
+    const r = win >> 1;
+    const W = w + 1;
+    const integ   = new Float64Array(W * (h + 1)); // suma de valores
+    const integSq = new Float64Array(W * (h + 1)); // suma de cuadrados
+    for (let y = 0; y < h; y++) {
+        let rowSum = 0, rowSqSum = 0;
+        for (let x = 0; x < w; x++) {
+            const v = px[(y * w + x) * 4];
+            rowSum += v; rowSqSum += v * v;
+            const idx = (y + 1) * W + (x + 1);
+            integ[idx]   = integ[y * W + (x + 1)]   + rowSum;
+            integSq[idx] = integSq[y * W + (x + 1)] + rowSqSum;
+        }
+    }
+    for (let y = 0; y < h; y++) {
+        const y0 = Math.max(0, y - r), y1 = Math.min(h - 1, y + r);
+        for (let x = 0; x < w; x++) {
+            const x0 = Math.max(0, x - r), x1 = Math.min(w - 1, x + r);
+            const area = (x1 - x0 + 1) * (y1 - y0 + 1);
+            const A = (y1 + 1) * W + (x1 + 1), B = (y1 + 1) * W + x0;
+            const C = y0 * W + (x1 + 1),       D = y0 * W + x0;
+            const sum   = integ[A]   - integ[B]   - integ[C]   + integ[D];
+            const sqSum = integSq[A] - integSq[B] - integSq[C] + integSq[D];
+            const mean  = sum / area;
+            const variance = sqSum / area - mean * mean;
+            const std = variance > 0 ? Math.sqrt(variance) : 0;
+            const T = mean * (1 + k * (std / 128 - 1));
+            const o = (y * w + x) * 4;
+            const val = px[o] > T ? 255 : 0;
+            px[o] = px[o + 1] = px[o + 2] = val;
+        }
+    }
+}
+
+// dibuja la imagen rotada + grises + contraste + (opcional) binarización local → canvas para OCR
 // targetMax = lado mayor deseado en px (acota tamaño para velocidad/memoria)
-function prepararCanvas(img, rot, targetMax = 2400, binarizar = false) {
-    const rad = rot * Math.PI / 180;
+// extraDeg = inclinación fina adicional (deskew) en grados, se suma a rot
+function prepararCanvas(img, rot, targetMax = 2400, binarizar = false, extraDeg = 0) {
+    const rad = (rot + extraDeg) * Math.PI / 180;
     const swap = (rot === 90 || rot === 270);
     const w = img.naturalWidth, h = img.naturalHeight;
     const baseW = swap ? h : w, baseH = swap ? w : h;
@@ -605,14 +646,8 @@ function prepararCanvas(img, rot, targetMax = 2400, binarizar = false) {
         g = g < 0 ? 0 : g > 255 ? 255 : g;
         px[i] = px[i + 1] = px[i + 2] = g;
     }
-    // binarización Otsu (gran mejora en papel térmico)
-    if (binarizar) {
-        const thr = otsuThreshold(px);
-        for (let i = 0; i < px.length; i += 4) {
-            const v = px[i] > thr ? 255 : 0;
-            px[i] = px[i + 1] = px[i + 2] = v;
-        }
-    }
+    // binarización local Sauvola (gran mejora en papel térmico con luz despareja)
+    if (binarizar) sauvolaBinarize(px, cw, ch);
     ctx.putImageData(d, 0, 0);
     return canvas;
 }
@@ -646,9 +681,10 @@ async function getTessWorker() {
 async function ocrCanvas(canvas, onProgress) {
     const worker = await getTessWorker();
     _tessOnProgress = onProgress || null;
-    const { data } = await worker.recognize(canvas);
+    // { blocks: true } → cajas (bbox) y confianza por palabra (parse espacial por columnas)
+    const { data } = await worker.recognize(canvas, {}, { blocks: true });
     _tessOnProgress = null;
-    return data; // { text, confidence, ... }
+    return data; // { text, confidence, blocks, ... }
 }
 
 // elige orientación con OCR rápido (reducido) en 0/90/180/270 por mayor confianza
@@ -656,11 +692,23 @@ async function detectarRotacion(img) {
     let best = { rot: 0, conf: -1 };
     for (const rot of [0, 90, 180, 270]) {
         try {
-            const data = await ocrCanvas(prepararCanvas(img, rot, 1000));
+            const data = await ocrCanvas(prepararCanvas(img, rot, 1000, true));
             if (data.confidence > best.conf) best = { rot, conf: data.confidence };
         } catch (e) { /* ignora rotación fallida */ }
     }
     return best.rot;
+}
+
+// inclinación residual fina: prueba pequeños ángulos por mayor confianza (imagen reducida)
+async function detectarDeskew(img, rot) {
+    let best = { deg: 0, conf: -1 };
+    for (const deg of [0, -2, 2, -4, 4]) {
+        try {
+            const data = await ocrCanvas(prepararCanvas(img, rot, 1000, true, deg));
+            if (data.confidence > best.conf) best = { deg, conf: data.confidence };
+        } catch (e) { /* ignora */ }
+    }
+    return best.deg;
 }
 
 async function procesarBoleta(event) {
@@ -674,6 +722,7 @@ async function procesarBoleta(event) {
         boletaImg = await fileToImage(file);
         setBoletaProgress('<span style="color:#6c757d;font-size:13px;">🧭 Detectando orientación…</span>');
         boletaRot = await detectarRotacion(boletaImg);
+        boletaDeskew = await detectarDeskew(boletaImg, boletaRot);
         await leerBoleta();
     } catch (e) {
         console.error('Boleta OCR error:', e);
@@ -685,18 +734,24 @@ async function procesarBoleta(event) {
 // OCR completo con la rotación actual → parse → preview
 async function leerBoleta() {
     if (!boletaImg) return;
-    const canvas = prepararCanvas(boletaImg, boletaRot, 2400);
+    const canvas = prepararCanvas(boletaImg, boletaRot, 2400, true, boletaDeskew);
     setBoletaProgress(barraProgreso(0));
     const data = await ocrCanvas(canvas, p => setBoletaProgress(barraProgreso(p)));
     setBoletaProgress('');
     document.getElementById('boletaRotar').style.display = 'inline-block';
-    boletaParsed = parseBoleta(data.text);
+    // depuración temporal
+    window.__ocrText = data.text; window.__ocrBlocks = data.blocks;
+    // parse espacial por columnas (bbox); si no hay cajas, fallback al parse de texto plano
+    const filas = filasDesdeBlocks(data.blocks);
+    boletaParsed = filas.length ? parseBoletaWords(filas) : parseBoleta(data.text);
+    boletaTotal = detectarTotal(data.text);
     renderBoletaPreview();
 }
 
 function rotarBoleta() {
     if (!boletaImg) return;
     boletaRot = (boletaRot + 90) % 360;
+    boletaDeskew = 0; // el usuario corrige a mano la orientación gruesa
     document.getElementById('boletaPreview').innerHTML = '';
     leerBoleta().catch(e => { console.error(e); toast('Error al releer', 'error'); });
 }
@@ -711,6 +766,44 @@ function validarEAN(code) {
     return check === dig[12];
 }
 
+// confusiones típicas de OCR entre dígitos (bidireccional)
+const OCR_DIGIT_CONF = { '0':['8','6','9'], '8':['0','6','3'], '6':['8','5','0'], '5':['6','9','2'], '9':['0','5'], '1':['7'], '7':['1','2'], '3':['8'], '2':['7','5'] };
+
+// si el EAN no valida el dígito verificador, intenta corregir UN dígito por sus confusiones de OCR.
+// devuelve { ean, matchInsumo } — prioriza el candidato que ya esté ligado a un insumo (recupera el indexado).
+function corregirEAN(ean) {
+    if (!ean || !/^\d{12,13}$/.test(ean)) return null;
+    let validoSinMatch = null;
+    for (let i = 0; i < ean.length; i++) {
+        const alts = OCR_DIGIT_CONF[ean[i]];
+        if (!alts) continue;
+        for (const a of alts) {
+            const cand = ean.slice(0, i) + a + ean.slice(i + 1);
+            if (!validarEAN(cand)) continue;
+            const ins = insumoPorBarras(cand);
+            if (ins) return { ean: cand, insumo: ins };   // mejor caso: calza con insumo conocido
+            if (!validoSinMatch) validoSinMatch = cand;   // respaldo: válido pero sin match
+        }
+    }
+    return validoSinMatch ? { ean: validoSinMatch, insumo: null } : null;
+}
+
+// resuelve el match de un ítem a partir de su EAN crudo y nombre.
+// devuelve { ean, eanOk, eanCorregido, insumoId, matchSource }
+function resolverMatch(eanRaw, nombre) {
+    let ean = eanRaw, eanCorregido = false;
+    let eanOk = ean ? validarEAN(ean) : false;
+    let insumo = eanOk ? insumoPorBarras(ean) : null;
+    // EAN no válido → intentar corrección por confusión OCR
+    if (ean && !eanOk) {
+        const fix = corregirEAN(ean);
+        if (fix) { ean = fix.ean; eanOk = true; eanCorregido = true; insumo = fix.insumo; }
+    }
+    let matchSource = insumo ? 'ean' : null;
+    if (!insumo && nombre) { insumo = matchInsumo(nombre); if (insumo) matchSource = 'nombre'; }
+    return { ean, eanOk, eanCorregido, insumoId: insumo ? insumo.id : null, matchSource };
+}
+
 // número chileno → entero (6.790 → 6790, -1.800 → -1800)
 function parseMontoCL(s) {
     const neg = /-/.test(s);
@@ -720,7 +813,11 @@ function parseMontoCL(s) {
 }
 
 const BOLETA_IGNORAR  = /\b(rut|boleta|electronica|sii|cencosud|retail|s\.?a\.?|avenida|avda|av|kennedy|alcalde|infante|condes|poniente|direccion|metropolitana|maipu|sub\s*total|neto|iva|descuentos?|total|debito|credito|vuelto|puntos|nombre|saldo|esta\s+compra|revisa|www|condiciones|terminos|acumul)\b/i;
+// ruido de footer/totales que el OCR pega a otras palabras (sin word-boundary): captura
+// "NESCUENTOS" (DESCUENTOS mal leído), "puntoscencostd", URLs de puntos, etc.
+const BOLETA_IGNORAR2 = /escuent|cencos|puntos|w{2,}\.|\.c[lo]\b|sub\s*total|t\.?\s*debito|vuelto|kennedy|alcalde|infante/i;
 const BOLETA_DESCUENTO = /(ofertas?|imbatible|descuento|promo|dcto)/i;
+const esLineaIgnorada = l => BOLETA_IGNORAR.test(l) || BOLETA_IGNORAR2.test(l);
 
 // cantidad + unidad desde la descripción (750GR, 1KG, 12 UN…)
 function cantidadUnidadDesc(desc) {
@@ -759,16 +856,19 @@ function parseBoleta(texto) {
     for (const linea of lineas) {
         // descuentos (aplican al último ítem)
         if (BOLETA_DESCUENTO.test(linea)) { aplicarDescuento(items, linea); continue; }
-        if (BOLETA_IGNORAR.test(linea)) continue;
+        if (esLineaIgnorada(linea)) continue;
         // línea de precio por peso ("0,424 KG X $1.990") → no es un ítem propio
         if (/\bkg\s*x\b|\bx\s*\$/i.test(linea)) continue;
 
         const eanM = linea.match(/\b(\d{12,13})\b/);
         const ean = eanM ? eanM[1] : null;
 
-        // los ítems de esta boleta siempre traen código de barras → exigir EAN descarta
-        // totales/subtotales/líneas basura que el OCR a veces deja sin la palabra clave.
-        if (!ean) continue;
+        // antes se exigía EAN: si el OCR manchaba 1 dígito del código perdíamos el
+        // ítem completo. Ahora aceptamos líneas sin EAN, pero con guardas para no
+        // colar totales/basura (BOLETA_IGNORAR ya filtró total/subtotal/iva/etc.):
+        //   - debe tener letras (un nombre de producto, no solo números)
+        //   - quedan marcadas "nuevo" para revisión manual.
+        if (!ean && !/[a-záéíóúñ]{3,}/i.test(linea)) continue;
 
         // candidatos a precio: montos con miles (6.790 / 6 790 / 6, 757) o enteros 3-6 dígitos (844)
         const precios = linea.match(/-?\d{1,3}(?:[.,\s]\s*\d{3})+|\b\d{3,6}\b/g);
@@ -789,21 +889,135 @@ function parseBoleta(texto) {
         const nombre = limpiarNombreBoleta(desc);
         if (nombre.length < 2) continue;
 
-        // match: EAN válido primero (indexador), luego nombre
-        const eanOk = ean ? validarEAN(ean) : false;
-        let insumo = eanOk ? insumoPorBarras(ean) : null;
-        let matchSource = insumo ? 'ean' : null;
-        if (!insumo) { insumo = matchInsumo(nombre); if (insumo) matchSource = 'nombre'; }
-
-        items.push({ ean, eanOk, nombreRaw: nombre, cantidad, unidad, precio, descuento: 0, fecha: hoyISO(), insumoId: insumo ? insumo.id : null, matchSource });
+        // match: EAN válido/corregido primero (indexador), luego nombre
+        const m = resolverMatch(ean, nombre);
+        items.push({ ...m, nombreRaw: nombre, cantidad, unidad, precio, descuento: 0, fecha: hoyISO(), conf: null });
     }
     return items;
 }
 
+// ── Parse espacial por columnas (usa cajas/bbox de Tesseract) ──────────
+// aplana blocks→...→words y agrupa en filas por solapamiento vertical
+function filasDesdeBlocks(blocks) {
+    if (!Array.isArray(blocks) || !blocks.length) return [];
+    const words = [];
+    const walk = node => {
+        if (!node) return;
+        if (Array.isArray(node.words)) for (const w of node.words) {
+            const t = (w.text || '').trim();
+            if (t && w.bbox) words.push({ text: t, conf: w.confidence ?? 0, bbox: w.bbox });
+        }
+        for (const key of ['blocks', 'paragraphs', 'lines', 'children']) {
+            if (Array.isArray(node[key])) for (const c of node[key]) walk(c);
+        }
+    };
+    for (const b of blocks) walk(b);
+    if (!words.length) return [];
+
+    // altura mediana de palabra → tolerancia de fila
+    const alturas = words.map(w => w.bbox.y1 - w.bbox.y0).sort((a, b) => a - b);
+    const hMed = alturas[alturas.length >> 1] || 12;
+    const tol = hMed * 0.6;
+
+    words.sort((a, b) => (a.bbox.y0 + a.bbox.y1) - (b.bbox.y0 + b.bbox.y1));
+    const filas = [];
+    for (const w of words) {
+        const cy = (w.bbox.y0 + w.bbox.y1) / 2;
+        let fila = filas.find(f => Math.abs(f.cy - cy) <= tol);
+        if (!fila) { fila = { cy, words: [] }; filas.push(fila); }
+        fila.words.push(w);
+        // centro-y promedio ponderado para estabilizar la agrupación
+        fila.cy = fila.words.reduce((s, x) => s + (x.bbox.y0 + x.bbox.y1) / 2, 0) / fila.words.length;
+    }
+    for (const f of filas) f.words.sort((a, b) => a.bbox.x0 - b.bbox.x0); // izquierda→derecha
+    return filas;
+}
+
+function parseBoletaWords(filas) {
+    const items = [];
+    for (const fila of filas) {
+        const linea = fila.words.map(w => w.text).join(' ');
+        if (BOLETA_DESCUENTO.test(linea)) { aplicarDescuento(items, linea); continue; }
+        if (esLineaIgnorada(linea)) continue;
+        if (/\bkg\s*x\b|\bx\s*\$/i.test(linea)) continue;
+
+        // EAN: token (o tokens contiguos) de 12-13 dígitos
+        const eanM = linea.match(/\b(\d{12,13})\b/);
+        const ean = eanM ? eanM[1] : null;
+        if (!ean && !/[a-záéíóúñ]{3,}/i.test(linea)) continue;
+
+        // precio: el clúster numérico más a la derecha que sea monto plausible y no el EAN.
+        // recorre las words de derecha a izquierda buscando tokens numéricos.
+        let precio = null, precioX = Infinity;
+        for (let i = fila.words.length - 1; i >= 0; i--) {
+            const t = fila.words[i].text;
+            if (!/\d/.test(t)) continue;
+            const soloNum = t.replace(/[^\d]/g, '');
+            if (ean && soloNum === ean) continue;
+            if (!/^-?\$?\d{1,3}(?:[.,\s]?\d{3})*$|^-?\$?\d{3,6}$/.test(t)) continue;
+            const v = parseMontoCL(t);
+            if (v && v > 0 && v < 1000000) { precio = v; precioX = fila.words[i].bbox.x0; break; }
+        }
+        // respaldo: regex sobre la línea aplanada (por si el precio quedó partido en 2 words)
+        if (precio == null) {
+            const precios = linea.match(/-?\d{1,3}(?:[.,\s]\s*\d{3})+|\b\d{3,6}\b/g);
+            if (precios) for (let i = precios.length - 1; i >= 0; i--) {
+                if (ean && precios[i].replace(/[^\d]/g, '') === ean) continue;
+                const v = parseMontoCL(precios[i]);
+                if (v && v > 0 && v < 1000000) { precio = v; break; }
+            }
+        }
+        if (precio == null) continue;
+
+        // nombre: tokens de texto (con letras) a la izquierda del precio, sin el EAN
+        const nombreTokens = fila.words
+            .filter(w => w.bbox.x0 < precioX && w.text.replace(/[^\d]/g, '') !== ean)
+            .map(w => w.text).join(' ');
+        let desc = nombreTokens || linea;
+        if (ean) desc = desc.replace(ean, ' ');
+        desc = desc.replace(/-?\d{1,3}(?:[.,\s]\s*\d{3})+/g, ' ');
+        const { cantidad, unidad } = cantidadUnidadDesc(desc);
+        const nombre = limpiarNombreBoleta(desc);
+        if (nombre.length < 2) continue;
+
+        const conf = Math.round(fila.words.reduce((s, w) => s + w.conf, 0) / fila.words.length);
+        const m = resolverMatch(ean, nombre);
+        items.push({ ...m, nombreRaw: nombre, cantidad, unidad, precio, descuento: 0, fecha: hoyISO(), conf });
+    }
+    return items;
+}
+
+// lee el TOTAL impreso (no SUB TOTAL) para cuadrar contra la suma de ítems
+function detectarTotal(texto) {
+    const lineas = texto.split('\n');
+    let total = null;
+    for (const l of lineas) {
+        if (!/\btotal\b/i.test(l)) continue;
+        if (/sub\s*total/i.test(l)) continue;
+        const montos = l.match(/\d{1,3}(?:[.,\s]\s*\d{3})+|\b\d{3,6}\b/g);
+        if (montos) { const v = parseMontoCL(montos[montos.length - 1]); if (v && v > 0) total = v; }
+    }
+    return total;
+}
+
 function badgeMatchBoleta(r) {
-    if (r.matchSource === 'ean')    return '<span style="background:#37b24d;color:#fff;font-size:10px;padding:3px 7px;border-radius:8px;white-space:nowrap;">✓ código</span>';
-    if (r.matchSource === 'nombre') return '<span style="background:#f59f00;color:#fff;font-size:10px;padding:3px 7px;border-radius:8px;white-space:nowrap;">por nombre</span>';
-    return '<span style="background:#adb5bd;color:#fff;font-size:10px;padding:3px 7px;border-radius:8px;white-space:nowrap;">nuevo</span>';
+    const chip = (bg, txt) => `<span style="background:${bg};color:#fff;font-size:10px;padding:3px 7px;border-radius:8px;white-space:nowrap;">${txt}</span>`;
+    if (r.matchSource === 'ean')    return chip('#37b24d', r.eanCorregido ? '✓ código ✎' : '✓ código');
+    if (r.matchSource === 'nombre') return chip('#f59f00', 'por nombre');
+    return chip('#adb5bd', 'nuevo');
+}
+
+// banda de cuadre: compara la suma de ítems con el TOTAL impreso en la boleta
+function cuadreBoletaHtml(suma) {
+    if (!boletaTotal) return '';
+    const dif = boletaTotal - suma;
+    const cuadra = Math.abs(dif) <= 50; // tolerancia de redondeo
+    const cur = esc(currency);
+    if (cuadra) {
+        return `<div style="font-size:12.5px;color:#2b8a3e;background:#ebfbee;border:1px solid #b2f2bb;border-radius:8px;padding:7px 10px;margin-bottom:12px;">✓ Cuadra con el total de la boleta (${cur}${boletaTotal.toLocaleString('es-CL')})</div>`;
+    }
+    const signo = dif > 0 ? 'faltan' : 'sobran';
+    return `<div style="font-size:12.5px;color:#a26312;background:#fff9db;border:1px solid #ffe066;border-radius:8px;padding:7px 10px;margin-bottom:12px;">⚠ No cuadra con la boleta: total impreso ${cur}${boletaTotal.toLocaleString('es-CL')}, suma actual ${cur}${suma.toLocaleString('es-CL')} (${signo} ${cur}${Math.abs(dif).toLocaleString('es-CL')}). Revisa los precios en ámbar.</div>`;
 }
 
 function renderBoletaPreview() {
@@ -813,8 +1027,10 @@ function renderBoletaPreview() {
         return;
     }
     const total = boletaParsed.reduce((s, r) => s + (parseFloat(r.precio) || 0), 0);
+    const cuadre = cuadreBoletaHtml(total);
     el.innerHTML =
         `<div style="font-size:13px;color:#495057;margin-bottom:10px;">🧾 <strong>${boletaParsed.length}</strong> productos detectados · total ${esc(currency)}${total.toLocaleString('es-CL')} — revisa, corrige y registra:</div>
+         ${cuadre}
          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <label style="font-size:13px;color:#6c757d;">Fecha de compra</label>
             <input type="date" id="boletaFecha" value="${boletaParsed[0] ? boletaParsed[0].fecha : hoyISO()}" onchange="boletaFechaTodos(this.value)" style="padding:6px 10px;border:2px solid #e9ecef;border-radius:8px;">
@@ -827,7 +1043,7 @@ function renderBoletaPreview() {
             <select onchange="boletaEdit(${i},'unidad',this.value)" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
                 ${['g', 'kg', 'ml', 'l', 'unidad'].map(u => `<option value="${u}" ${u === r.unidad ? 'selected' : ''}>${u}</option>`).join('')}
             </select>
-            <input type="number" value="${r.precio}" step="1" oninput="boletaEdit(${i},'precio',this.value)" title="${r.precio > 0 ? 'Precio total pagado' : '⚠ No se leyó bien el precio — corrígelo'}" style="padding:7px;border:2px solid ${r.precio > 0 ? '#e9ecef' : '#dc3545'};border-radius:8px;">
+            <input type="number" value="${r.precio}" step="1" oninput="boletaEdit(${i},'precio',this.value)" title="${r.precio <= 0 ? '⚠ No se leyó bien el precio — corrígelo' : (r.conf != null && r.conf < 70 ? '⚠ Lectura de baja confianza — verifica el precio' : 'Precio total pagado')}" style="padding:7px;border:2px solid ${r.precio <= 0 ? '#dc3545' : (r.conf != null && r.conf < 70 ? '#f59f00' : '#e9ecef')};border-radius:8px;">
             <select onchange="boletaEdit(${i},'insumoId',this.value)" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
                 <option value="__new__" ${!r.insumoId ? 'selected' : ''}>➕ Crear "${esc(r.nombreRaw)}"</option>
                 ${insumos.map(ins => `<option value="${ins.id}" ${ins.id === r.insumoId ? 'selected' : ''}>${esc(ins.nombre)}</option>`).join('')}
@@ -848,10 +1064,8 @@ function boletaEdit(i, campo, valor) {
 
 function boletaRematch(i) {
     const r = boletaParsed[i];
-    let insumo = (r.ean && r.eanOk) ? insumoPorBarras(r.ean) : null;
-    r.matchSource = insumo ? 'ean' : null;
-    if (!insumo) { insumo = matchInsumo((r.nombreRaw || '').trim()); if (insumo) r.matchSource = 'nombre'; }
-    r.insumoId = insumo ? insumo.id : null;
+    const m = resolverMatch(r.ean, (r.nombreRaw || '').trim());
+    Object.assign(r, m); // ean, eanOk, eanCorregido, insumoId, matchSource
     renderBoletaPreview();
 }
 
@@ -890,7 +1104,7 @@ async function aplicarBoleta() {
         ok++;
     }
     boletaParsed = [];
-    boletaImg = null; boletaRot = 0;
+    boletaImg = null; boletaRot = 0; boletaDeskew = 0; boletaTotal = null;
     document.getElementById('boletaPreview').innerHTML = '';
     document.getElementById('boletaProgress').innerHTML = '';
     document.getElementById('boletaRotar').style.display = 'none';
