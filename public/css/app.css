@@ -669,6 +669,26 @@ th { background: #f8f9fa; font-weight: 600; color: #495057; }
 .calc-editor[open] > summary::after { transform: rotate(180deg); }
 .calc-editor-body { padding: 0 18px 18px; }
 
+/* chip de icono por receta (SVG fiel al tipo, set fluent-emoji-flat) */
+.receta-emoji {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.receta-emoji img {
+    width: 32px;
+    height: 32px;
+    display: block;
+}
+
 /* Scanner */
 .scanner-area {
     border: 3px dashed #667eea;
