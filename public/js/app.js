@@ -1,6 +1,9 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, collection, getDocs, addDoc, deleteDoc, updateDoc, doc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+// Firebase AI Logic (Gemini) — instancia v12 separada, sólo para el respaldo de IA del lector de boletas
+import { initializeApp as initAiApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
+import { getAI, getGenerativeModel, GoogleAIBackend, Schema } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-ai.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyCiRD6oqLCxcqf8jNL5lf2CJVqzslpYIsE",
@@ -546,6 +549,8 @@ let boletaRot = 0;      // rotación aplicada (0/90/180/270)
 let boletaDeskew = 0;   // inclinación residual fina en grados (deskew)
 let boletaParsed = [];
 let boletaTotal = null; // TOTAL impreso en la boleta (para cuadre)
+let boletaFuente = 'ocr'; // 'ocr' (Tesseract) | 'ia' (Gemini afinó el resultado)
+let _iaAvisoMostrado = false; // evita repetir el aviso "IA no disponible"
 
 function hoyISO() { return new Date().toISOString().slice(0, 10); }
 
@@ -792,6 +797,25 @@ async function leerBoleta() {
     const filas = filasDesdeBlocks(data.blocks);
     boletaParsed = filas.length ? parseBoletaWords(filas) : parseBoleta(data.text);
     boletaTotal = detectarTotal(data.text);
+    boletaFuente = 'ocr';
+    // híbrido: si Tesseract no cuadra, la llama afina con visión IA (Gemini)
+    if (boletaNecesitaIA()) {
+        try {
+            mostrarCargaBoleta('La llama afina con su súper vista…');
+            const ia = await extraerBoletaIA();
+            if (ia.items.length) {
+                boletaParsed = ia.items;
+                if (ia.total) boletaTotal = ia.total;
+                boletaFuente = 'ia';
+            }
+        } catch (e) {
+            console.error('IA boleta error:', e);
+            if (!_iaAvisoMostrado) {
+                _iaAvisoMostrado = true;
+                toast('La IA no está disponible (actívala en Firebase). Sigo con la lectura básica.', 'error');
+            }
+        }
+    }
     renderBoletaPreview();
 }
 
@@ -1049,6 +1073,102 @@ function detectarTotal(texto) {
     return total;
 }
 
+// ── Respaldo de IA (híbrido): si Tesseract no cuadra, la llama "afina" con visión ──
+let _geminiModel = null;
+function getGemini() {
+    if (_geminiModel) return _geminiModel;
+    const aiApp = initAiApp(firebaseConfig, 'llama-ai');           // instancia separada (no choca con la v10)
+    const ai = getAI(aiApp, { backend: new GoogleAIBackend() });   // Gemini Developer API (capa gratis)
+    const schema = Schema.object({ properties: {
+        productos: Schema.array({ items: Schema.object({
+            properties: {
+                nombre:   Schema.string(),
+                ean:      Schema.string(),
+                cantidad: Schema.number(),
+                unidad:   Schema.string(),
+                precio:   Schema.number()
+            },
+            optionalProperties: ['ean']
+        }) }),
+        total: Schema.number()
+    }, optionalProperties: ['total'] });
+    _geminiModel = getGenerativeModel(ai, {
+        model: 'gemini-2.5-flash',
+        generationConfig: { responseMimeType: 'application/json', responseSchema: schema }
+    });
+    return _geminiModel;
+}
+
+// JPEG base64 de la boleta (color, enderezada, sin binarizar) para la IA de visión
+function boletaParaIA(maxLado = 1500) {
+    const img = boletaImg;
+    const rot = boletaRot, extra = boletaDeskew;
+    const swap = (rot === 90 || rot === 270);
+    const w = img.naturalWidth, h = img.naturalHeight;
+    const baseW = swap ? h : w, baseH = swap ? w : h;
+    const scale = Math.min(1, maxLado / Math.max(baseW, baseH));
+    const cw = Math.round(baseW * scale), ch = Math.round(baseH * scale);
+    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.translate(cw / 2, ch / 2);
+    ctx.rotate((rot + extra) * Math.PI / 180);
+    ctx.scale(scale, scale);
+    ctx.drawImage(img, -w / 2, -h / 2);
+    return c.toDataURL('image/jpeg', 0.85).split(',')[1]; // sin el prefijo data:
+}
+
+const UNIDAD_IA = { g:'g', gr:'g', gramo:'g', gramos:'g', kg:'kg', kilo:'kg', kilos:'kg', ml:'ml', cc:'ml', l:'l', lt:'l', litro:'l', litros:'l', un:'unidad', u:'unidad', unidad:'unidad', unidades:'unidad' };
+function normUnidad(u) {
+    const k = quitarAcentos(String(u || '').toLowerCase().trim());
+    return UNIDAD_IA[k] || 'unidad';
+}
+
+const PROMPT_BOLETA_IA = `Eres un extractor de boletas de supermercado chilenas. Mira la foto y devuelve SOLO los productos comprados.
+Reglas:
+- NO incluyas totales, subtotales, IVA, neto, descuentos resumidos, dirección, RUT ni puntos.
+- Precios en pesos chilenos como ENTEROS (el punto separa miles, no hay decimales): "1.290" = 1290.
+- Para cada producto da el precio FINAL pagado de esa línea: si justo debajo hay un descuento ("SANTAS OFERTAS", "CARRO IMBATIBLE", etc.) réstalo del precio bruto.
+- Incluye el código de barras (ean) si está impreso en la línea; si no, déjalo vacío.
+- cantidad y unidad: "750GR" → cantidad 750, unidad "g"; "1KG" → 1, "kg"; "12 UN" → 12, "unidad"; si no se ve, cantidad 1, unidad "unidad". Unidades válidas: g, kg, ml, l, unidad.
+- Devuelve además "total" = el TOTAL impreso de la boleta (entero).`;
+
+async function extraerBoletaIA() {
+    const model = getGemini();
+    const data = boletaParaIA();
+    const result = await model.generateContent([
+        { inlineData: { mimeType: 'image/jpeg', data } },
+        PROMPT_BOLETA_IA
+    ]);
+    const obj = JSON.parse(result.response.text());
+    const productos = Array.isArray(obj.productos) ? obj.productos : [];
+    const items = productos.map(p => {
+        const ean = p.ean ? String(p.ean).replace(/\D/g, '') : null;
+        const nombre = String(p.nombre || '').trim();
+        const m = resolverMatch(ean && ean.length >= 12 ? ean : null, nombre);
+        return {
+            ...m,
+            nombreRaw: nombre,
+            cantidad: Number(p.cantidad) > 0 ? Number(p.cantidad) : 1,
+            unidad: normUnidad(p.unidad),
+            precio: Math.round(Number(p.precio)) || 0,
+            descuento: 0, fecha: hoyISO(), conf: 99, fuente: 'ia'
+        };
+    }).filter(it => it.nombreRaw.length >= 2);
+    return { items, total: Number(obj.total) > 0 ? Math.round(Number(obj.total)) : null };
+}
+
+// ¿el resultado de Tesseract amerita afinar con IA? (no cuadra, baja confianza o vacío)
+function boletaNecesitaIA() {
+    if (!boletaParsed.length) return true;
+    const suma = boletaParsed.reduce((s, r) => s + (Number(r.precio) || 0), 0);
+    if (boletaTotal && Math.abs(boletaTotal - suma) > 50) return true;      // no cuadra con el total
+    if (boletaParsed.some(r => r.precio <= 0)) return true;                  // precio no leído
+    const bajas = boletaParsed.filter(r => r.conf != null && r.conf < 70).length;
+    if (bajas >= 2) return true;                                            // varias filas dudosas
+    return false;
+}
+
 function badgeMatchBoleta(r) {
     const chip = (bg, txt) => `<span style="background:${bg};color:#fff;font-size:10px;padding:3px 7px;border-radius:8px;white-space:nowrap;">${txt}</span>`;
     if (r.matchSource === 'ean')    return chip('#37b24d', r.eanCorregido ? '✓ código ✎' : '✓ código');
@@ -1077,8 +1197,12 @@ function renderBoletaPreview() {
     }
     const total = boletaParsed.reduce((s, r) => s + (parseFloat(r.precio) || 0), 0);
     const cuadre = cuadreBoletaHtml(total);
+    const fuenteHtml = boletaFuente === 'ia'
+        ? `<div style="font-size:12px;color:#5f3dc4;background:#f3f0ff;border:1px solid #d0bfff;border-radius:8px;padding:6px 10px;margin-bottom:10px;display:inline-block;">✨ Afinado por la llama IA (la lectura básica no cuadraba)</div>`
+        : '';
     el.innerHTML =
         `<div style="font-size:13px;color:#495057;margin-bottom:10px;">🧾 <strong>${boletaParsed.length}</strong> productos detectados · total ${esc(currency)}${total.toLocaleString('es-CL')} — revisa, corrige y registra:</div>
+         ${fuenteHtml}
          ${cuadre}
          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
             <label style="font-size:13px;color:#6c757d;">Fecha de compra</label>
@@ -1153,7 +1277,7 @@ async function aplicarBoleta() {
         ok++;
     }
     boletaParsed = [];
-    boletaImg = null; boletaRot = 0; boletaDeskew = 0; boletaTotal = null;
+    boletaImg = null; boletaRot = 0; boletaDeskew = 0; boletaTotal = null; boletaFuente = 'ocr';
     document.getElementById('boletaPreview').innerHTML = '';
     document.getElementById('boletaProgress').innerHTML = '';
     document.getElementById('boletaRotar').style.display = 'none';
@@ -1163,6 +1287,36 @@ async function aplicarBoleta() {
 }
 
 // ── Recetas ───────────────────────────────────────────────────
+// icono de repostería fiel al tipo de receta. Devuelve el SLUG de un SVG en
+// img/icons/ (set fluent-emoji-flat de Iconify, descargado offline por
+// tools/fetch_icons.sh). Orden = de lo más específico a lo genérico; el primero
+// que matchea gana, así el tipo estructural pesa más que el sabor (chocolate).
+function iconReceta(nombre) {
+    const n = quitarAcentos(nombre || '');
+    const has = (...ws) => ws.some(w => n.includes(w));
+    if (has('cheesecake', 'tarta de queso', 'torta de queso')) return 'shortcake';
+    if (has('pan de pascua', 'brazo de reina', 'pionono', 'enrollado')) return 'birthday-cake';
+    if (has('pie', 'tarta', 'tartaleta', 'kuchen', 'quiche')) return 'pie';
+    if (has('cupcake', 'muffin', 'magdalena', 'ponque individual')) return 'cupcake';
+    if (has('galleta', 'cookie', 'alfajor', 'macaron', 'calzones rotos', 'masa seca')) return 'cookie';
+    if (has('dona', 'donut', 'berlin', 'picaron', 'sopaipilla')) return 'doughnut';
+    if (has('croissant', 'medialuna', 'cuernito', 'cacho')) return 'croissant';
+    if (has('bagel')) return 'bagel';
+    if (has('pretzel')) return 'pretzel';
+    if (has('baguette', 'marraqueta')) return 'baguette-bread';
+    if (has('flan', 'pudin', 'leche asada', 'creme', 'natilla', 'panna', 'custard')) return 'custard';
+    if (has('helado', 'sorbete', 'semifrio')) return 'soft-ice-cream';
+    if (has('waffle', 'wafle')) return 'waffle';
+    if (has('panqueque', 'pancake', 'tortita', 'crepe')) return 'pancakes';
+    if (has('empanada', 'empanadita')) return 'dumpling';
+    if (has('mousse', 'merengue', 'suspiro')) return 'fish-cake-with-swirl';
+    if (has('brownie', 'trufa', 'bombon', 'ganache')) return 'chocolate-bar';
+    if (has('torta', 'cake', 'pastel', 'bizcocho', 'bizcochuelo', 'ponque', 'queque')) return 'birthday-cake';
+    if (has('pan ', 'amasado', 'hallulla', 'brioche', 'bollo', 'trenza')) return 'bread';
+    if (has('chocolate')) return 'chocolate-bar'; // sabor, solo si no hay tipo estructural
+    return 'cupcake'; // fallback genérico de repostería
+}
+
 function renderRecetas() {
     const el = document.getElementById('listaRecetas');
     if (!recetas.length) {
@@ -1230,7 +1384,8 @@ function renderRecetas() {
         }
 
         return `<div style="background:#f8f9fa; border-radius:14px; padding:18px; margin-bottom:12px; border-left:4px solid #667eea;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:14px;">
+                <div class="receta-emoji" title="${esc(r.nombre)}"><img src="img/icons/${iconReceta(r.nombre)}.svg" alt="" loading="lazy" onerror="this.style.display='none'"></div>
                 <div style="flex:1; min-width:0;">
                     <h3 style="color:#343a40;">${esc(r.nombre)}</h3>
                     <p style="color:#6c757d; font-size:13px; margin-top:4px;">${r.porciones} porciones · ${r.ingredientes.length} ingredientes</p>
