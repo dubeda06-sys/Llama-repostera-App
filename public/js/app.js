@@ -665,6 +665,52 @@ function barraProgreso(p) {
         </div>`;
 }
 
+// ── Ventana de carga: la llama repostera "pensando" mientras lee la boleta ──
+function overlayCargaBoleta() {
+    let el = document.getElementById('boletaCarga');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'boletaCarga';
+    el.className = 'boleta-carga';
+    el.hidden = true;
+    el.innerHTML = `
+        <div class="bc-card">
+            <div class="bc-llama-wrap">
+                <div class="bc-bubble"><span></span><span></span><span></span></div>
+                <img class="bc-llama" src="img/anim/loader/llama.png" alt="La llama pensando">
+            </div>
+            <div class="bc-title">La llama está pensando…</div>
+            <div class="bc-status" id="bcStatus"></div>
+            <div class="bc-bar"><div class="bc-bar-fill" id="bcBarFill"></div></div>
+            <div class="bc-pct" id="bcPct"></div>
+        </div>`;
+    document.body.appendChild(el);
+    return el;
+}
+
+// estado = texto bajo el título; pct = 0..1 (null → barra indeterminada)
+function mostrarCargaBoleta(estado, pct = null) {
+    const el = overlayCargaBoleta();
+    el.hidden = false;
+    const st = document.getElementById('bcStatus');
+    const fill = document.getElementById('bcBarFill');
+    const pc = document.getElementById('bcPct');
+    if (st) st.textContent = estado || '';
+    if (pct == null) {
+        if (fill) { fill.classList.add('indet'); fill.style.width = ''; }
+        if (pc) pc.textContent = '';
+    } else {
+        const v = Math.round(pct * 100);
+        if (fill) { fill.classList.remove('indet'); fill.style.width = v + '%'; }
+        if (pc) pc.textContent = v + '%';
+    }
+}
+
+function ocultarCargaBoleta() {
+    const el = document.getElementById('boletaCarga');
+    if (el) el.hidden = true;
+}
+
 let _tessWorker = null;
 let _tessOnProgress = null;
 
@@ -718,15 +764,17 @@ async function procesarBoleta(event) {
     document.getElementById('boletaPreview').innerHTML = '';
     document.getElementById('boletaRotar').style.display = 'none';
     try {
-        setBoletaProgress('<span style="color:#6c757d;font-size:13px;">📂 Cargando imagen…</span>');
+        mostrarCargaBoleta('Abriendo tu boleta…');
         boletaImg = await fileToImage(file);
-        setBoletaProgress('<span style="color:#6c757d;font-size:13px;">🧭 Detectando orientación…</span>');
+        mostrarCargaBoleta('Mirando bien la foto…');
         boletaRot = await detectarRotacion(boletaImg);
+        mostrarCargaBoleta('Enderezando la boleta…');
         boletaDeskew = await detectarDeskew(boletaImg, boletaRot);
         await leerBoleta();
+        ocultarCargaBoleta();
     } catch (e) {
         console.error('Boleta OCR error:', e);
-        setBoletaProgress('');
+        ocultarCargaBoleta();
         toast('No se pudo leer la boleta', 'error');
     }
 }
@@ -735,9 +783,8 @@ async function procesarBoleta(event) {
 async function leerBoleta() {
     if (!boletaImg) return;
     const canvas = prepararCanvas(boletaImg, boletaRot, 2400, true, boletaDeskew);
-    setBoletaProgress(barraProgreso(0));
-    const data = await ocrCanvas(canvas, p => setBoletaProgress(barraProgreso(p)));
-    setBoletaProgress('');
+    mostrarCargaBoleta('Leyendo los productos…', 0);
+    const data = await ocrCanvas(canvas, p => mostrarCargaBoleta('Leyendo los productos…', p));
     document.getElementById('boletaRotar').style.display = 'inline-block';
     // depuración temporal
     window.__ocrText = data.text; window.__ocrBlocks = data.blocks;
@@ -753,7 +800,9 @@ function rotarBoleta() {
     boletaRot = (boletaRot + 90) % 360;
     boletaDeskew = 0; // el usuario corrige a mano la orientación gruesa
     document.getElementById('boletaPreview').innerHTML = '';
-    leerBoleta().catch(e => { console.error(e); toast('Error al releer', 'error'); });
+    leerBoleta()
+        .then(ocultarCargaBoleta)
+        .catch(e => { console.error(e); ocultarCargaBoleta(); toast('Error al releer', 'error'); });
 }
 
 // valida dígito verificador EAN-13 (descarta lecturas OCR erróneas)
