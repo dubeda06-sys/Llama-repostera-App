@@ -1,12 +1,12 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getFirestore, collection, getDocs, addDoc, deleteDoc, updateDoc, doc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 // Firebase AI Logic (Gemini) — instancia v12 separada, sólo para el respaldo de IA del lector de boletas
 import { initializeApp as initAiApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
 import { getAI, getGenerativeModel, GoogleAIBackend, Schema } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-ai.js';
 // App Check (reCAPTCHA v3): verifica que las llamadas vengan de esta app real (protege datos y cuota de IA)
 import { initializeAppCheck, ReCaptchaV3Provider, getToken as getAppCheckToken } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
-import { initializeAppCheck as initAiAppCheck, ReCaptchaV3Provider as ReCaptchaV3ProviderAi } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app-check.js';
+import { initializeAppCheck as initAiAppCheck, ReCaptchaV3Provider as ReCaptchaV3ProviderAi, getToken as getAiAppCheckToken } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app-check.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyCiRD6oqLCxcqf8jNL5lf2CJVqzslpYIsE",
@@ -49,7 +49,17 @@ function esc(s) {
 }
 
 // ── Auth ─────────────────────────────────────────────────────
+// ¿la app corre instalada (standalone)? Ahí el popup de Google suele fallar → usamos redirect.
+function esStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
 function signInGoogle() {
+    if (esStandalone()) {
+        signInWithRedirect(auth, googleProvider)
+            .catch(err => toast('Error al iniciar sesión: ' + err.message, 'error'));
+        return;
+    }
     signInWithPopup(auth, googleProvider)
         .catch(err => toast('Error al iniciar sesión: ' + err.message, 'error'));
 }
@@ -1131,13 +1141,19 @@ function detectarTotal(texto) {
 
 // ── Respaldo de IA (híbrido): si Tesseract no cuadra, la llama "afina" con visión ──
 let _geminiModel = null;
-function getGemini() {
-    if (_geminiModel) return _geminiModel;
+let _aiAppCheck = null;
+async function getGemini() {
+    if (_geminiModel) {
+        // asegura token App Check fresco antes de cada uso (necesario con enforcement de AI Logic)
+        if (_aiAppCheck) { try { await getAiAppCheckToken(_aiAppCheck); } catch (e) { console.warn('App Check IA:', e); } }
+        return _geminiModel;
+    }
     const aiApp = initAiApp(firebaseConfig, 'llama-ai');           // instancia separada (no choca con la v10)
-    initAiAppCheck(aiApp, {                                         // App Check también en la instancia de IA
+    _aiAppCheck = initAiAppCheck(aiApp, {                           // App Check también en la instancia de IA
         provider: new ReCaptchaV3ProviderAi(APP_CHECK_SITE_KEY),
         isTokenAutoRefreshEnabled: true
     });
+    try { await getAiAppCheckToken(_aiAppCheck); } catch (e) { console.warn('App Check IA:', e); } // espera el token
     const ai = getAI(aiApp, { backend: new GoogleAIBackend() });   // Gemini Developer API (capa gratis)
     const schema = Schema.object({ properties: {
         productos: Schema.array({ items: Schema.object({
@@ -1194,7 +1210,7 @@ Reglas:
 - Devuelve además "total" = el TOTAL impreso de la boleta (entero).`;
 
 async function extraerBoletaIA() {
-    const model = getGemini();
+    const model = await getGemini();
     const data = boletaParaIA();
     const result = await model.generateContent([
         { inlineData: { mimeType: 'image/jpeg', data } },
@@ -1953,6 +1969,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cod) cod.addEventListener('input', () => { cod.dataset.manual = cod.value ? '1' : ''; });
 
     const EMAILS_PERMITIDOS = ['dubeda06@gmail.com', 'claudia.jarap01@gmail.com'];
+
+    // completa el login por redirect (cuando corre instalada); onAuthStateChanged hace el resto
+    getRedirectResult(auth).catch(err => {
+        if (err && err.code !== 'auth/no-auth-event') toast('Error al iniciar sesión: ' + err.message, 'error');
+    });
 
     onAuthStateChanged(auth, async user => {
         const loginScreen = document.getElementById('loginScreen');

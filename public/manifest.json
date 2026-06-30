@@ -1,7 +1,11 @@
 {
-  "name": "Gestor de Repostería",
-  "short_name": "Repostería",
+  "id": "/",
+  "name": "Llama Repostera",
+  "short_name": "Llama Repostera",
   "description": "Controla tus costos y maximiza tus ganancias en repostería",
+  "lang": "es",
+  "dir": "ltr",
+  "scope": "/",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#764ba2",
