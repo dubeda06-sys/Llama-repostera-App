@@ -1284,21 +1284,37 @@ function renderBoletaPreview() {
             <label style="font-size:13px;color:#6c757d;">Fecha de compra</label>
             <input type="date" id="boletaFecha" value="${boletaParsed[0] ? boletaParsed[0].fecha : hoyISO()}" onchange="boletaFechaTodos(this.value)" style="padding:6px 10px;border:2px solid #e9ecef;border-radius:8px;">
          </div>` +
-        boletaParsed.map((r, i) => `
-        <div style="display:grid;grid-template-columns:auto 1.4fr 64px 80px 92px 1.3fr auto;gap:6px;align-items:center;margin-bottom:6px;">
-            <div title="${r.ean || 'sin código de barras'}">${badgeMatchBoleta(r)}</div>
-            <input type="text" value="${esc(r.nombreRaw || '')}" oninput="boletaEdit(${i},'nombreRaw',this.value)" onchange="boletaRematch(${i})" placeholder="Producto" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
-            <input type="number" value="${r.cantidad}" step="0.001" oninput="boletaEdit(${i},'cantidad',this.value)" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
-            <select onchange="boletaEdit(${i},'unidad',this.value)" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
-                ${['g', 'kg', 'ml', 'l', 'unidad'].map(u => `<option value="${u}" ${u === r.unidad ? 'selected' : ''}>${u}</option>`).join('')}
-            </select>
-            <input type="number" value="${r.precio}" step="1" oninput="boletaEdit(${i},'precio',this.value)" title="${r.precio <= 0 ? '⚠ No se leyó bien el precio — corrígelo' : (r.conf != null && r.conf < 70 ? '⚠ Lectura de baja confianza — verifica el precio' : 'Precio total pagado')}" style="padding:7px;border:2px solid ${r.precio <= 0 ? '#dc3545' : (r.conf != null && r.conf < 70 ? '#f59f00' : '#e9ecef')};border-radius:8px;">
-            <select onchange="boletaEdit(${i},'insumoId',this.value)" style="padding:7px;border:2px solid #e9ecef;border-radius:8px;">
-                <option value="__new__" ${!r.insumoId ? 'selected' : ''}>➕ Crear "${esc(r.nombreRaw)}"</option>
-                ${insumos.map(ins => `<option value="${ins.id}" ${ins.id === r.insumoId ? 'selected' : ''}>${esc(ins.nombre)}</option>`).join('')}
-            </select>
-            <button class="btn btn-danger btn-sm" onclick="boletaQuitar(${i})">✕</button>
-        </div>`).join('') +
+        boletaParsed.map((r, i) => {
+            const pBorde = r.precio <= 0 ? '#dc3545' : (r.conf != null && r.conf < 70 ? '#f59f00' : '#e9ecef');
+            const pTitle = r.precio <= 0 ? '⚠ No se leyó bien el precio — corrígelo' : (r.conf != null && r.conf < 70 ? '⚠ Lectura de baja confianza — verifica el precio' : 'Precio total pagado');
+            return `
+        <div class="boleta-item">
+            <div class="bi-head">
+                <span class="bi-badge" title="${r.ean || 'sin código de barras'}">${badgeMatchBoleta(r)}</span>
+                <input class="bi-nombre" type="text" value="${esc(r.nombreRaw || '')}" oninput="boletaEdit(${i},'nombreRaw',this.value)" onchange="boletaRematch(${i})" placeholder="Producto">
+                <button class="bi-del" onclick="boletaQuitar(${i})" title="Quitar producto">✕</button>
+            </div>
+            <div class="bi-grid">
+                <label class="bi-f">Cantidad
+                    <input type="number" value="${r.cantidad}" step="0.001" inputmode="decimal" oninput="boletaEdit(${i},'cantidad',this.value)">
+                </label>
+                <label class="bi-f">Unidad
+                    <select onchange="boletaEdit(${i},'unidad',this.value)">
+                        ${['g', 'kg', 'ml', 'l', 'unidad'].map(u => `<option value="${u}" ${u === r.unidad ? 'selected' : ''}>${u}</option>`).join('')}
+                    </select>
+                </label>
+                <label class="bi-f">Precio total
+                    <input type="number" value="${r.precio}" step="1" inputmode="numeric" title="${pTitle}" style="border-color:${pBorde};" oninput="boletaEdit(${i},'precio',this.value)">
+                </label>
+            </div>
+            <label class="bi-f bi-insumo">¿Qué insumo es?
+                <select onchange="boletaEdit(${i},'insumoId',this.value)">
+                    <option value="__new__" ${!r.insumoId ? 'selected' : ''}>➕ Crear "${esc(r.nombreRaw)}"</option>
+                    ${insumos.map(ins => `<option value="${ins.id}" ${ins.id === r.insumoId ? 'selected' : ''}>${esc(ins.nombre)}</option>`).join('')}
+                </select>
+            </label>
+        </div>`;
+        }).join('') +
         `<p style="font-size:11px;color:#adb5bd;margin:8px 0;">Los productos nuevos se crean con su código de barras (EAN); los existentes quedan ligados a ese EAN para reconocerse solos en la próxima boleta.</p>
          <button class="btn btn-success" style="margin-top:6px;" onclick="aplicarBoleta()">✓ Registrar ${boletaParsed.length} compras</button>`;
 }

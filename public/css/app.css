@@ -850,6 +850,61 @@ th { background: #f8f9fa; font-weight: 600; color: #495057; }
     .bc-llama, .bc-bubble, .bc-bubble span, .bc-bar-fill.indet { animation: none; }
 }
 
+/* ── Preview de boleta: tarjeta por producto (táctil en celular) ── */
+.boleta-item {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+.bi-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.bi-badge { flex-shrink: 0; }
+.bi-nombre {
+    flex: 1; min-width: 0;
+    padding: 11px 10px;
+    font-size: 16px;            /* 16px evita el zoom automático en iOS */
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+}
+.bi-del {
+    flex-shrink: 0;
+    width: 42px; height: 42px;
+    border: none; border-radius: 8px;
+    background: #ffe3e3; color: #e03131;
+    font-size: 18px; font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+}
+.bi-del:hover { background: #ffc9c9; }
+.bi-grid { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px; margin-bottom: 10px; }
+.bi-f { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: #6c757d; font-weight: 600; }
+.bi-f input, .bi-f select {
+    width: 100%;
+    padding: 11px 10px;
+    font-size: 16px;            /* tap grande + sin zoom iOS */
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    background: #fff;
+}
+.bi-insumo { margin-top: 2px; }
+
+/* botón final de registrar: grande y fácil de tocar */
+#boletaPreview .btn-success {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+@media (max-width: 560px) {
+    /* en celular: cantidad y unidad arriba, precio en su propia fila (más ancho) */
+    .bi-grid { grid-template-columns: 1fr 1fr; }
+    .bi-grid .bi-f:nth-child(3) { grid-column: 1 / -1; }
+}
+
 /* Config */
 .config-group {
     background: #f8f9fa;
