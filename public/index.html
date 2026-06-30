@@ -88,68 +88,86 @@
             <div id="insumos" class="section">
                 <div class="section-title"><img class="st-icon" src="img/insumos.png" alt=""> Insumos</div>
 
-                <div class="search-wrapper">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" class="search-input" id="buscarInsumo"
-                        placeholder="Buscar ingrediente para agregar rápido..."
-                        oninput="filtrarSugeridos(this.value)"
-                        onfocus="mostrarSugeridos()"
-                        autocomplete="off">
-                    <div class="sugeridos-dropdown" id="sugeridosDropdown"></div>
+                <!-- Pestañas: Ver / Ingresar -->
+                <div class="ins-tabs">
+                    <button id="insTabVerBtn" class="ins-tab active" onclick="insumosTab('ver')">📋 Mis insumos</button>
+                    <button id="insTabIngresarBtn" class="ins-tab" onclick="insumosTab('ingresar')">➕ Ingresar</button>
                 </div>
 
-                <div class="grid-insumos">
-                    <div>
-                        <label>Nombre del insumo</label>
-                        <input type="text" id="insumoNombre" placeholder="Ej: Harina, Azúcar..." oninput="autoCodigo()">
+                <!-- VER: lista agrupada (con precio / sin precio) -->
+                <div id="insumosVer" class="ins-pane">
+                    <div class="search-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-input" id="filtrarInsumo"
+                            placeholder="Filtrar mis insumos por nombre o código..."
+                            oninput="renderInsumos()" autocomplete="off">
                     </div>
-                    <div>
-                        <label>Código interno</label>
-                        <input type="text" id="insumoCodigo" placeholder="HAR-01" maxlength="12">
-                    </div>
-                    <div>
-                        <label>Código de barras (opcional)</label>
-                        <input type="text" id="insumoBarras" placeholder="7501055300007" maxlength="20">
-                    </div>
-                    <div style="padding-bottom:1px">
-                        <label>&nbsp;</label>
-                        <button class="btn btn-primary" onclick="agregarInsumo()">+ Agregar</button>
-                    </div>
+                    <div id="listaInsumos"><div class="spinner"></div></div>
                 </div>
 
-                <!-- Módulo códigos de barra -->
-                <div class="barras-module">
-                    <div class="barras-header" onclick="toggleBarras()">
-                        <span>🔖 Códigos de barra</span>
-                        <span id="barrasChevron" style="transition:transform .2s;">▼</span>
+                <!-- INGRESAR: alta + códigos de barra -->
+                <div id="insumosIngresar" class="ins-pane" style="display:none;">
+                    <div class="search-wrapper">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" class="search-input" id="buscarInsumo"
+                            placeholder="Buscar ingrediente para agregar rápido..."
+                            oninput="filtrarSugeridos(this.value)"
+                            onfocus="mostrarSugeridos()"
+                            autocomplete="off">
+                        <div class="sugeridos-dropdown" id="sugeridosDropdown"></div>
                     </div>
-                    <div class="barras-body" id="barrasBody">
-                        <p style="font-size:13px; color:#6c757d; margin-bottom:14px;">
-                            Liga uno o varios códigos de barra a cada producto. Distintas marcas o presentaciones del mismo insumo pueden tener códigos diferentes.
-                        </p>
 
-                        <div class="grid-barras-mod">
-                            <div>
-                                <label>Código de barras</label>
-                                <input type="text" id="barrasCodigo" placeholder="Escanea o escribe…" maxlength="20"
-                                    oninput="lookupBarras(this.value)" autocomplete="off">
-                            </div>
-                            <div>
-                                <label>Producto</label>
-                                <select id="barrasInsumo"><option value="">Selecciona un insumo</option></select>
-                            </div>
-                            <div style="padding-bottom:1px">
-                                <label>&nbsp;</label>
-                                <button class="btn btn-primary" onclick="ligarBarras()">🔗 Ligar</button>
-                            </div>
+                    <div class="grid-insumos">
+                        <div>
+                            <label>Nombre del insumo</label>
+                            <input type="text" id="insumoNombre" placeholder="Ej: Harina, Azúcar..." oninput="autoCodigo()">
                         </div>
-                        <div id="barrasLookup" style="min-height:20px; font-size:13px; margin-bottom:14px;"></div>
+                        <div>
+                            <label>Código interno</label>
+                            <input type="text" id="insumoCodigo" placeholder="HAR-01" maxlength="12">
+                        </div>
+                        <div>
+                            <label>Código de barras (opcional)</label>
+                            <input type="text" id="insumoBarras" placeholder="7501055300007" maxlength="20">
+                        </div>
+                        <div style="padding-bottom:1px">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary" onclick="agregarInsumo()">+ Agregar</button>
+                        </div>
+                    </div>
 
-                        <div id="listaBarras"></div>
+                    <!-- Módulo códigos de barra -->
+                    <div class="barras-module">
+                        <div class="barras-header" onclick="toggleBarras()">
+                            <span>🔖 Códigos de barra</span>
+                            <span id="barrasChevron" style="transition:transform .2s;">▼</span>
+                        </div>
+                        <div class="barras-body" id="barrasBody">
+                            <p style="font-size:13px; color:#6c757d; margin-bottom:14px;">
+                                Liga uno o varios códigos de barra a cada producto. Distintas marcas o presentaciones del mismo insumo pueden tener códigos diferentes.
+                            </p>
+
+                            <div class="grid-barras-mod">
+                                <div>
+                                    <label>Código de barras</label>
+                                    <input type="text" id="barrasCodigo" placeholder="Escanea o escribe…" maxlength="20"
+                                        oninput="lookupBarras(this.value)" autocomplete="off">
+                                </div>
+                                <div>
+                                    <label>Producto</label>
+                                    <select id="barrasInsumo"><option value="">Selecciona un insumo</option></select>
+                                </div>
+                                <div style="padding-bottom:1px">
+                                    <label>&nbsp;</label>
+                                    <button class="btn btn-primary" onclick="ligarBarras()">🔗 Ligar</button>
+                                </div>
+                            </div>
+                            <div id="barrasLookup" style="min-height:20px; font-size:13px; margin-bottom:14px;"></div>
+
+                            <div id="listaBarras"></div>
+                        </div>
                     </div>
                 </div>
-
-                <div id="listaInsumos"><div class="spinner"></div></div>
             </div>
 
             <!-- COMPRAS -->

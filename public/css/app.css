@@ -689,6 +689,60 @@ th { background: #f8f9fa; font-weight: 600; color: #495057; }
     display: block;
 }
 
+/* ── Insumos: pestañas Ver / Ingresar ── */
+.ins-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+    border-bottom: 2px solid #e9ecef;
+}
+.ins-tab {
+    background: none;
+    border: none;
+    padding: 10px 18px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #adb5bd;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: color .2s, border-color .2s;
+}
+.ins-tab:hover { color: #4fa8d8; }
+.ins-tab.active { color: #4fa8d8; border-bottom-color: #4fa8d8; }
+
+/* grupos de la lista (con precio / sin precio) */
+.insumo-grupo { margin-bottom: 22px; }
+.insumo-grupo-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    margin-bottom: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #495057;
+}
+.insumo-grupo-count {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.insumo-grupo-nota {
+    font-size: 12px;
+    color: #adb5bd;
+    margin: -4px 0 12px 4px;
+}
+
 /* Scanner */
 .scanner-area {
     border: 3px dashed #667eea;

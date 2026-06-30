@@ -1,12 +1,19 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null
+
+    // Sólo los 2 dueños de la cuenta, con correo verificado por Google.
+    function esDueno() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
         && request.auth.token.email in [
              'dubeda06@gmail.com',
              'claudia.jarap01@gmail.com'
            ];
+    }
+
+    match /{document=**} {
+      allow read, write: if esDueno();
     }
   }
 }

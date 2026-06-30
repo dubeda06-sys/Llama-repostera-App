@@ -236,15 +236,26 @@ function precioInsumo(id) {
     return (ins && ins.precio != null) ? ins.precio : 0;
 }
 
-function renderInsumos() {
-    const el = document.getElementById('listaInsumos');
-    if (!insumos.length) {
-        el.innerHTML = '<div class="empty-state"><div class="es-icon">📦</div><p>No hay insumos registrados</p><button class="es-cta" onclick="document.getElementById(\'insumoNombre\').focus()">+ Agregar primer insumo</button></div>';
-        return;
-    }
-    el.innerHTML = insumos.map(ins => {
-        const tieneprecio = ins.precio != null && ins.unidadBase;
-        const emoji  = getEmoji(ins.nombre);
+// pestañas Ver / Ingresar de la sección Insumos
+function insumosTab(which) {
+    const ver = document.getElementById('insumosVer');
+    const ing = document.getElementById('insumosIngresar');
+    const vBtn = document.getElementById('insTabVerBtn');
+    const iBtn = document.getElementById('insTabIngresarBtn');
+    const verActivo = which !== 'ingresar';
+    ver.style.display = verActivo ? 'block' : 'none';
+    ing.style.display = verActivo ? 'none' : 'block';
+    vBtn.classList.toggle('active', verActivo);
+    iBtn.classList.toggle('active', !verActivo);
+    if (!verActivo) setTimeout(() => { const n = document.getElementById('insumoNombre'); if (n) n.focus(); }, 50);
+}
+
+function tienePrecioInsumo(ins) { return ins.precio != null && ins.unidadBase; }
+
+// tarjeta de un insumo (vista + edición)
+function insumoCardHtml(ins) {
+    const tieneprecio = tienePrecioInsumo(ins);
+    const emoji  = getEmoji(ins.nombre);
         const codigo = ins.codigo || '—';
         const barras = ins.codigosBarras || [];
         const barrasHtml = barras.length
@@ -278,7 +289,41 @@ function renderInsumos() {
                 ${barras.length ? `<div style="margin-top:8px;">${barras.map(b => `<span class="barcode-chip">${esc(b)}</span>`).join('')}<span style="font-size:11px; color:#adb5bd; margin-left:6px;">(edita códigos en el módulo 🔖)</span></div>` : ''}
             </div>
         </div>`;
-    }).join('');
+}
+
+function renderInsumos() {
+    const el = document.getElementById('listaInsumos');
+    if (!el) return;
+    if (!insumos.length) {
+        el.innerHTML = '<div class="empty-state"><div class="es-icon">📦</div><p>No hay insumos registrados</p><button class="es-cta" onclick="insumosTab(\'ingresar\')">+ Agregar primer insumo</button></div>';
+        return;
+    }
+    // filtro de texto (nombre o código)
+    const q = quitarAcentos((document.getElementById('filtrarInsumo')?.value || '').toLowerCase().trim());
+    const lista = q
+        ? insumos.filter(i => quitarAcentos((i.nombre + ' ' + (i.codigo || '')).toLowerCase()).includes(q))
+        : insumos;
+    if (!lista.length) {
+        el.innerHTML = '<p style="color:#adb5bd;font-size:13px;padding:20px;text-align:center;">Sin resultados para tu filtro.</p>';
+        return;
+    }
+    const ordenar = arr => arr.slice().sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    const conPrecio = ordenar(lista.filter(tienePrecioInsumo));
+    const sinPrecio = ordenar(lista.filter(i => !tienePrecioInsumo(i)));
+
+    const grupo = (titulo, color, icono, arr, nota) => !arr.length ? '' : `
+        <div class="insumo-grupo">
+            <div class="insumo-grupo-head" style="border-left:4px solid ${color};">
+                <span>${icono} ${titulo}</span>
+                <span class="insumo-grupo-count" style="background:${color};">${arr.length}</span>
+            </div>
+            ${nota ? `<p class="insumo-grupo-nota">${nota}</p>` : ''}
+            ${arr.map(insumoCardHtml).join('')}
+        </div>`;
+
+    el.innerHTML =
+        grupo('Con precio', '#37b24d', '💲', conPrecio) +
+        grupo('Sin precio', '#f59f00', '🏷️', sinPrecio, 'Estos aún no tienen costo. Registra una compra (o escanea una boleta) para que tomen precio.');
 }
 
 async function agregarInsumo() {
@@ -1926,6 +1971,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.openSection         = openSection;
 window.goBack              = goBack;
 window.agregarInsumo       = agregarInsumo;
+window.insumosTab          = insumosTab;
 window.autoCodigo          = autoCodigo;
 window.eliminarInsumo      = eliminarInsumo;
 window.toggleBarras        = toggleBarras;
