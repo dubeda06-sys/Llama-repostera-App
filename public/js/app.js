@@ -282,7 +282,7 @@ function insumoCardHtml(ins) {
         const barrasHtml = barras.length
             ? `<span style="color:#adb5bd; font-size:11px; margin-left:8px;">🔖 ${barras.length}</span>` : '';
         return `
-        <div class="insumo-card" id="card-${ins.id}">
+        <div class="insumo-card ${tieneprecio ? 'ins-con-precio' : 'ins-sin-precio'}" id="card-${ins.id}">
             <div class="insumo-card-view" id="view-${ins.id}">
                 <div class="insumo-info">
                     <span class="insumo-emoji">${emoji}</span>
@@ -295,15 +295,15 @@ function insumoCardHtml(ins) {
                     </div>
                 </div>
                 <div class="insumo-actions">
-                    <button class="btn btn-edit btn-sm" onclick="iniciarEdicion('${ins.id}')">✏️ Editar</button>
-                    <button class="btn btn-danger btn-sm" onclick="eliminarInsumo('${ins.id}')">🗑️</button>
+                    <button class="btn btn-edit" onclick="iniciarEdicion('${ins.id}')">✏️ Editar</button>
+                    <button class="btn btn-danger" onclick="eliminarInsumo('${ins.id}')" title="Eliminar">🗑️</button>
                 </div>
             </div>
             <div class="insumo-card-edit" id="edit-${ins.id}">
                 <div class="edit-row">
                     <input type="text" id="eCodigo-${ins.id}" value="${esc(ins.codigo || '')}" placeholder="Código" maxlength="12">
                     <input type="text" id="eNombre-${ins.id}" value="${esc(ins.nombre)}" placeholder="Nombre">
-                    <input type="number" id="ePrecio-${ins.id}" value="${tieneprecio ? ins.precio : ''}" placeholder="Precio manual" step="0.01" min="0" style="width:110px;">
+                    <input type="number" id="ePrecio-${ins.id}" value="${tieneprecio ? ins.precio : ''}" placeholder="Precio manual" step="0.01" min="0">
                     <button class="btn btn-success btn-sm" onclick="guardarEdicion('${ins.id}')">✓</button>
                     <button class="btn btn-edit btn-sm" onclick="cancelarEdicion('${ins.id}')">✕</button>
                 </div>
@@ -339,7 +339,7 @@ function renderInsumos() {
                 <span class="insumo-grupo-count" style="background:${color};">${arr.length}</span>
             </div>
             ${nota ? `<p class="insumo-grupo-nota">${nota}</p>` : ''}
-            ${arr.map(insumoCardHtml).join('')}
+            <div class="insumo-grid">${arr.map(insumoCardHtml).join('')}</div>
         </div>`;
 
     el.innerHTML =
