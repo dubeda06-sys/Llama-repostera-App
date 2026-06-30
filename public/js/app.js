@@ -5,7 +5,7 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
 import { initializeApp as initAiApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
 import { getAI, getGenerativeModel, GoogleAIBackend, Schema } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-ai.js';
 // App Check (reCAPTCHA v3): verifica que las llamadas vengan de esta app real (protege datos y cuota de IA)
-import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
+import { initializeAppCheck, ReCaptchaV3Provider, getToken as getAppCheckToken } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
 import { initializeAppCheck as initAiAppCheck, ReCaptchaV3Provider as ReCaptchaV3ProviderAi } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app-check.js';
 
 const firebaseConfig = {
@@ -21,7 +21,7 @@ const firebaseApp = initializeApp(firebaseConfig);
 
 // App Check — clave de sitio reCAPTCHA v3 (pública). Debe inicializarse antes de usar Firestore/IA.
 const APP_CHECK_SITE_KEY = '6LeLIT0tAAAAAHO0Knz6sBMTrxgg4xs64Lt1UDhA';
-initializeAppCheck(firebaseApp, {
+const appCheck = initializeAppCheck(firebaseApp, {
     provider: new ReCaptchaV3Provider(APP_CHECK_SITE_KEY),
     isTokenAutoRefreshEnabled: true
 });
@@ -1972,6 +1972,9 @@ document.addEventListener('DOMContentLoaded', () => {
             appRoot.style.display     = 'block';
             userInfo.style.display    = 'flex';
             if (userName) userName.textContent = user.displayName || user.email || '';
+            // espera el token de App Check antes de leer Firestore (evita la carrera de arranque
+            // que dejaría las primeras solicitudes sin verificar bajo enforcement)
+            try { await getAppCheckToken(appCheck); } catch (e) { console.warn('App Check token aún no listo:', e); }
             cargarTodo();
         } else {
             loginScreen.style.display = 'flex';
