@@ -4,6 +4,9 @@ import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signO
 // Firebase AI Logic (Gemini) — instancia v12 separada, sólo para el respaldo de IA del lector de boletas
 import { initializeApp as initAiApp } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js';
 import { getAI, getGenerativeModel, GoogleAIBackend, Schema } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-ai.js';
+// App Check (reCAPTCHA v3): verifica que las llamadas vengan de esta app real (protege datos y cuota de IA)
+import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
+import { initializeAppCheck as initAiAppCheck, ReCaptchaV3Provider as ReCaptchaV3ProviderAi } from 'https://www.gstatic.com/firebasejs/12.0.0/firebase-app-check.js';
 
 const firebaseConfig = {
     apiKey: "AIzaSyCiRD6oqLCxcqf8jNL5lf2CJVqzslpYIsE",
@@ -15,6 +18,14 @@ const firebaseConfig = {
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
+
+// App Check — clave de sitio reCAPTCHA v3 (pública). Debe inicializarse antes de usar Firestore/IA.
+const APP_CHECK_SITE_KEY = '6LeLIT0tAAAAAHO0Knz6sBMTrxgg4xs64Lt1UDhA';
+initializeAppCheck(firebaseApp, {
+    provider: new ReCaptchaV3Provider(APP_CHECK_SITE_KEY),
+    isTokenAutoRefreshEnabled: true
+});
+
 const db = getFirestore(firebaseApp);
 const auth = getAuth(firebaseApp);
 const googleProvider = new GoogleAuthProvider();
@@ -1123,6 +1134,10 @@ let _geminiModel = null;
 function getGemini() {
     if (_geminiModel) return _geminiModel;
     const aiApp = initAiApp(firebaseConfig, 'llama-ai');           // instancia separada (no choca con la v10)
+    initAiAppCheck(aiApp, {                                         // App Check también en la instancia de IA
+        provider: new ReCaptchaV3ProviderAi(APP_CHECK_SITE_KEY),
+        isTokenAutoRefreshEnabled: true
+    });
     const ai = getAI(aiApp, { backend: new GoogleAIBackend() });   // Gemini Developer API (capa gratis)
     const schema = Schema.object({ properties: {
         productos: Schema.array({ items: Schema.object({
