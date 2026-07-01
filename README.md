@@ -1,99 +1,49 @@
-# 🧁 Gestor de Repostería - Node.js
+# 🦙🧁 Llama Repostera
 
-Aplicación web para gestionar costos de repostería, migrada a Node.js con Express.
+PWA para gestionar los costos de un emprendimiento de repostería: insumos, compras, recetas y calculadora de precios. Con lector de boletas por IA.
+
+**App en producción:** Firebase Hosting (proyecto `llama-repostera-app`).
 
 ## Características
 
-- **Insumos**: Base de datos de ingredientes con unidades de medida
-- **Compras**: Registro de compras con cálculo de costos (método FIFO)
-- **Recetas**: Gestión de recetas con ingredientes y porciones
-- **Calculadora**: Cálculo automático de precios de venta con margen de ganancia
+- **Insumos**: catálogo de ingredientes con unidades, emojis y códigos de barras vinculados.
+- **Compras**: registro de compras manual o **escaneando la boleta** (foto → Gemini IA, con OCR local Tesseract.js de respaldo).
+- **Recetas**: recetas con ingredientes, porciones e importador desde texto.
+- **Calculadora**: precio de venta sugerido con materia prima, mano de obra, empaque, costos indirectos, merma y margen.
+- **PWA instalable**: funciona como app en el celular.
 
-## Requisitos
+## Stack
 
-- [Node.js](https://nodejs.org/) (versión 14 o superior)
+- Frontend: HTML + CSS + JavaScript vanilla (módulos ES, sin build step).
+- Hosting: Firebase Hosting.
+- Datos: Cloud Firestore (reglas: solo cuentas dueñas con email verificado).
+- Auth: Google Sign-In + App Check (reCAPTCHA v3).
+- IA: Gemini 2.5 Flash vía Firebase AI Logic para leer boletas.
 
-## Instalación en Windows
+## Desarrollo local
 
-1. Copia la carpeta `reposteria-app` a tu escritorio o ubicación deseada
-2. Haz doble clic en `iniciar.bat`
-
-El script:
-- Verifica que Node.js esté instalado
-- Instala las dependencias automáticamente (si es necesario)
-- Inicia el servidor
-- Abre la aplicación en tu navegador predeterminado
-
-## Instalación Manual
+Requiere [Firebase CLI](https://firebase.google.com/docs/cli) logueado en el proyecto.
 
 ```bash
-cd reposteria-app
-npm install
-npm start
+npm run serve    # emulador de hosting en http://localhost:5000
+npm run deploy   # deploy a producción
 ```
 
-Luego abre tu navegador en: http://localhost:3000
+> Nota App Check en localhost: antes de cargar la app, en la consola del navegador ejecuta
+> `self.FIREBASE_APPCHECK_DEBUG_TOKEN = true` y registra el token generado en
+> Firebase Console → App Check → Manage debug tokens.
 
-## Uso
-
-### 1. Agregar Insumos
-- Usa los botones rápidos para ingredientes comunes
-- O ingresa un nombre personalizado y unidad de medida
-
-### 2. Registrar Compras
-- Selecciona un insumo
-- Ingresa cantidad comprada y precio total
-- La fecha se autocompleta pero puedes modificarla
-
-### 3. Crear Recetas
-- Ingresa el nombre de la receta y porciones
-- Agrega ingredientes uno por uno
-- Guarda la receta cuando termines
-
-### 4. Calcular Precios
-- Selecciona una receta
-- Agrega costos adicionales (mano de obra, servicios, etc.)
-- Define tu margen de ganancia deseado
-- Obtén el precio de venta sugerido automáticamente
-
-## Estructura del Proyecto
+## Estructura
 
 ```
-reposteria-app/
-├── db.json           # Base de datos local (JSON)
-├── iniciar.bat       # Script para Windows
-├── package.json      # Configuración de Node.js
-├── public/
-│   └── index.html    # Frontend de la aplicación
-└── src/
-    └── server.js     # Servidor Express (API)
+public/
+├── index.html        # SPA (login + dashboard + secciones)
+├── css/app.css       # estilos y animaciones de la llama
+├── js/               # módulos ES (main.js = entrada)
+├── sw.js             # service worker (PWA)
+├── manifest.json
+└── img/              # personaje llama, iconos, banners
+firestore.rules       # seguridad Firestore
+firebase.json         # config hosting
+tools/                # utilidades de desarrollo
 ```
-
-## API Endpoints
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | /api/insumos | Obtener todos los insumos |
-| POST | /api/insumos | Crear nuevo insumo |
-| DELETE | /api/insumos/:id | Eliminar insumo |
-| GET | /api/compras | Obtener todas las compras |
-| POST | /api/compras | Registrar nueva compra |
-| DELETE | /api/compras/:id | Eliminar compra |
-| GET | /api/recetas | Obtener todas las recetas |
-| POST | /api/recetas | Crear nueva receta |
-| DELETE | /api/recetas/:id | Eliminar receta |
-
-## Datos Persistentes
-
-Los datos se guardan automáticamente en `db.json`. Puedes hacer copias de seguridad de este archivo para conservar tu información.
-
-## Tecnologías
-
-- **Backend**: Node.js + Express
-- **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
-- **Base de Datos**: Archivo JSON local
-- **CORS**: Habilitado para conexiones locales
-
----
-
-¡Disfruta gestionando tu repostería! 🍰🧁🍪
