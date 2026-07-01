@@ -184,8 +184,8 @@ export function renderBoletaPreview() {
                         ${['g', 'kg', 'ml', 'l', 'unidad'].map(u => `<option value="${u}" ${u === r.unidad ? 'selected' : ''}>${u}</option>`).join('')}
                     </select>
                 </label>
-                <label class="bi-f">Precio total
-                    <input type="number" value="${r.precio}" step="1" inputmode="numeric" title="${pTitle}" style="border-color:${pBorde};" oninput="boletaEdit(${i},'precio',this.value)">
+                <label class="bi-f">${dudoso || r.precio <= 0 ? '⚠ ' : ''}Precio total
+                    <input type="number" value="${r.precio}" step="1" inputmode="numeric" title="${pTitle}" style="border-color:${pBorde};" aria-invalid="${r.precio <= 0}" oninput="boletaEdit(${i},'precio',this.value)">
                 </label>
             </div>
             <label class="bi-f bi-insumo">¿Qué insumo es?

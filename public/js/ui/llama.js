@@ -18,6 +18,35 @@ export function chispitasHtml() {
     return `<span class="chispas" aria-hidden="true">${s}</span>`;
 }
 
+// ── Hints de primera visita por sección ──────────────────────
+const HINTS = {
+    insumos:     'Aquí viven tus <strong>ingredientes</strong>. Los que tienen precio lo toman solos de tus compras 💲',
+    compras:     'Registra compras a mano o <strong>escanéame la boleta</strong> — yo leo los precios con mi súper vista 📷',
+    recetas:     'Arma tus recetas con los insumos y sabrás <strong>cuánto te cuesta</strong> cada una. También puedes pegar la receta en texto y yo la interpreto ✨',
+    calculadora: 'Elige una receta y te sugiero el <strong>precio de venta</strong> con tu mano de obra, merma y margen 💰'
+};
+
+// muestra un globo de la llama la primera vez que se abre una sección
+export function mostrarHint(seccion) {
+    const texto = HINTS[seccion];
+    if (!texto) return;
+    if (localStorage.getItem('hint_' + seccion)) return;
+    const cont = document.getElementById(seccion);
+    if (!cont || cont.querySelector('.llama-hint')) return;
+    const el = document.createElement('div');
+    el.className = 'llama-hint';
+    el.innerHTML = `
+        <img src="img/anim/loader/llama.png" alt="">
+        <div class="lh-texto">${texto}</div>
+        <button class="lh-ok">¡Entendido!</button>`;
+    el.querySelector('.lh-ok').onclick = () => {
+        localStorage.setItem('hint_' + seccion, '1');
+        el.remove();
+    };
+    const titulo = cont.querySelector('.section-title');
+    if (titulo) titulo.after(el); else cont.prepend(el);
+}
+
 // toast de celebración: mini llama + chispitas
 export function celebrar(msg) {
     const host = document.getElementById('toastHost');

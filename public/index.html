@@ -32,7 +32,7 @@
             <img class="header-banner" src="img/banner.png" alt="Llama Repostera">
             <button class="config-btn" onclick="openSection('configuracion')" title="Configuración" aria-label="Configuración">⚙️</button>
             <h1><img class="header-logo" src="img/base.png" alt=""> Gestor de Repostería</h1>
-            <p>Controla tus costos y maximiza tus ganancias</p>
+            <p id="headerSaludo">Controla tus costos y maximiza tus ganancias</p>
             <div id="userInfo" style="display:none; align-items:center; justify-content:flex-end; gap:10px; padding:10px 20px;">
                 <span id="userName" style="font-size:13px; color:rgba(255,255,255,.85);"></span>
                 <button class="logout-btn" onclick="logout()" title="Cerrar sesión" aria-label="Cerrar sesión">↪ Salir</button>
@@ -387,7 +387,7 @@
         </div><!-- /content -->
     </div><!-- /container -->
 
-    <div id="toastHost"></div>
+    <div id="toastHost" aria-live="polite"></div>
 
     <div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-card">
@@ -401,7 +401,7 @@
     </div>
 
         <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-        <script type="module" src="js/main.js?v=tierno1"></script>
+        <script type="module" src="js/main.js?v=tierno2"></script>
         <script>
             // registra el service worker (PWA instalable); tolerante a fallos
             if ('serviceWorker' in navigator) {

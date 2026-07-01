@@ -196,14 +196,10 @@ export async function agregarInsumo(btn) {
     if (!codigo) codigo = sugerirCodigo(nombre);
     if (codigoBarras && barrasDuplicado(codigoBarras)) { marcarError(document.getElementById('insumoBarras')); return toast('Ese código de barras ya está ligado a otro producto', 'error'); }
     const datos = { codigo, nombre, codigosBarras: codigoBarras ? [codigoBarras] : [], precio: null, unidadBase: null, fechaCreacion: new Date().toISOString() };
-    const done = btnLoading(btn, 'Agregando…');
-    try {
-        const ref = await addDoc(collection(db, 'insumos'), datos);
-        state.insumos.push({ id: ref.id, ...datos });
-    } catch (e) {
-        console.error(e);
-        return toast('No se pudo guardar el insumo — revisa tu conexión', 'error');
-    } finally { done(); }
+
+    // UI optimista: pintar ya con id temporal, persistir después, revertir si falla
+    const tempId = 'tmp-' + Date.now();
+    state.insumos.push({ id: tempId, ...datos });
     const codEl = document.getElementById('insumoCodigo');
     nombreEl.value = '';
     document.getElementById('insumoBarras').value = '';
@@ -213,10 +209,33 @@ export async function agregarInsumo(btn) {
     actualizarSelects();
     actualizarContadores();
     toast(`"${nombre}" agregado`);
+
+    try {
+        const ref = await addDoc(collection(db, 'insumos'), datos);
+        const ins = state.insumos.find(i => i.id === tempId);
+        if (ins) ins.id = ref.id;
+        renderInsumos();
+        actualizarSelects();
+    } catch (e) {
+        console.error(e);
+        state.insumos = state.insumos.filter(i => i.id !== tempId);
+        renderInsumos();
+        renderBarras();
+        actualizarSelects();
+        actualizarContadores();
+        toast(`No se pudo guardar "${nombre}" — revisa tu conexión`, 'error');
+    }
 }
 
 export async function eliminarInsumo(id) {
-    if (!(await confirmar('¿Eliminar este insumo? Esta acción no se puede deshacer.'))) return;
+    // avisar qué recetas quedan cojas antes de borrar (hoy quedaban huérfanas en silencio)
+    const usadas = state.recetas
+        .filter(r => (r.ingredientes || []).some(ing => ing.insumoId === id))
+        .map(r => r.nombre);
+    const extra = usadas.length
+        ? ` OJO: se usa en ${usadas.length === 1 ? 'la receta' : 'las recetas'} "${usadas.join('", "')}" — quedará(n) sin costo.`
+        : '';
+    if (!(await confirmar('¿Eliminar este insumo? Esta acción no se puede deshacer.' + extra))) return;
     await deleteDoc(doc(db, 'insumos', id));
     state.insumos = state.insumos.filter(i => i.id !== id);
     renderInsumos();
@@ -350,17 +369,21 @@ export function renderBarras() {
 }
 
 // ── Búsqueda / sugeridos ──────────────────────────────────────
+let _sugMatches = [];   // matches visibles del dropdown
+let _sugActivo = -1;    // índice resaltado con el teclado
+
 export function filtrarSugeridos(query) {
     const drop = document.getElementById('sugeridosDropdown');
-    if (!query.trim()) { drop.style.display = 'none'; return; }
+    _sugActivo = -1;
+    if (!query.trim()) { drop.style.display = 'none'; _sugMatches = []; return; }
     const existentes = new Set(state.insumos.map(i => i.nombre.toLowerCase()));
-    const matches = SUGERIDOS.filter(s =>
+    _sugMatches = SUGERIDOS.filter(s =>
         s.nombre.toLowerCase().includes(query.toLowerCase()) &&
         !existentes.has(s.nombre.toLowerCase())
     );
-    if (!matches.length) { drop.style.display = 'none'; return; }
-    drop.innerHTML = matches.map(s => `
-        <div class="sugerido-item" onclick="seleccionarSugerido('${s.nombre}','${s.unidad}')">
+    if (!_sugMatches.length) { drop.style.display = 'none'; return; }
+    drop.innerHTML = _sugMatches.map((s, i) => `
+        <div class="sugerido-item" data-idx="${i}" role="option" onclick="seleccionarSugerido('${s.nombre}','${s.unidad}')">
             <span class="si-emoji">${s.emoji}</span>
             <div>
                 <div class="si-nombre">${s.nombre}</div>
@@ -369,6 +392,26 @@ export function filtrarSugeridos(query) {
         </div>
     `).join('');
     drop.style.display = 'block';
+}
+
+// navegación con teclado en el dropdown: flechas + Enter + Escape
+function sugTeclado(e) {
+    const drop = document.getElementById('sugeridosDropdown');
+    if (!drop || drop.style.display === 'none' || !_sugMatches.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        _sugActivo = e.key === 'ArrowDown'
+            ? (_sugActivo + 1) % _sugMatches.length
+            : (_sugActivo - 1 + _sugMatches.length) % _sugMatches.length;
+        drop.querySelectorAll('.sugerido-item').forEach((el, i) => el.classList.toggle('sug-activo', i === _sugActivo));
+        drop.querySelector('.sug-activo')?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter' && _sugActivo >= 0) {
+        e.preventDefault();
+        const s = _sugMatches[_sugActivo];
+        seleccionarSugerido(s.nombre, s.unidad);
+    } else if (e.key === 'Escape') {
+        cerrarDropdown();
+    }
 }
 
 export function mostrarSugeridos() {
@@ -390,3 +433,6 @@ export function cerrarDropdown() {
 document.addEventListener('click', e => {
     if (!e.target.closest('.search-wrapper')) cerrarDropdown();
 });
+
+// wiring del teclado (los módulos corren con el DOM ya parseado)
+document.getElementById('buscarInsumo')?.addEventListener('keydown', sugTeclado);

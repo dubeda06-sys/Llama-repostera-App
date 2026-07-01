@@ -93,6 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
             appRoot.style.display     = 'block';
             userInfo.style.display    = 'flex';
             if (userName) userName.textContent = user.displayName || user.email || '';
+            // saludo con nombre en el header
+            const saludo = document.getElementById('headerSaludo');
+            const primerNombre = (user.displayName || '').split(' ')[0];
+            if (saludo && primerNombre) saludo.textContent = `¡Hola, ${primerNombre}! Controla tus costos y maximiza tus ganancias 🦙`;
             // espera el token de App Check antes de leer Firestore (evita la carrera de arranque
             // que dejaría las primeras solicitudes sin verificar bajo enforcement)
             try { await getAppCheckToken(appCheck); } catch (e) { console.warn('App Check token aún no listo:', e); }
