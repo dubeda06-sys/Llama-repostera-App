@@ -177,15 +177,17 @@ export function parseBoletaWords(filas) {
     return items;
 }
 
-// lee el TOTAL impreso (no SUB TOTAL) para cuadrar contra la suma de ítems
+// lee el TOTAL impreso (no SUB TOTAL) para cuadrar contra la suma de ítems.
+// acepta también "TOTAL A PAGAR" y "MONTO CANCELADO"; con varios candidatos toma el mayor
+// (el subtotal/neto siempre es menor o igual que el total final).
 export function detectarTotal(texto) {
     const lineas = texto.split('\n');
-    let total = null;
+    const candidatos = [];
     for (const l of lineas) {
-        if (!/\btotal\b/i.test(l)) continue;
         if (/sub\s*total/i.test(l)) continue;
+        if (!/\btotal\b/i.test(l) && !/monto\s+cancelado/i.test(l)) continue;
         const montos = l.match(/\d{1,3}(?:[.,\s]\s*\d{3})+|\b\d{3,6}\b/g);
-        if (montos) { const v = parseMontoCL(montos[montos.length - 1]); if (v && v > 0) total = v; }
+        if (montos) { const v = parseMontoCL(montos[montos.length - 1]); if (v && v > 0) candidatos.push(v); }
     }
-    return total;
+    return candidatos.length ? Math.max(...candidatos) : null;
 }

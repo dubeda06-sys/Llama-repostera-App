@@ -1159,3 +1159,86 @@ th { background: #f8f9fa; font-weight: 600; color: #495057; }
 
 #userInfo { border-bottom: 1px solid #f0f0f0; }
 #userInfo #userName { color: #6c757d !important; }
+/* ── Preview de boleta v2: chips, selección, sticky y transparencia ── */
+.chip-resumen {
+    border: none;
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s;
+}
+.chip-resumen:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,.15); }
+.chip-resumen:active { transform: scale(.95); }
+
+.bi-check {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    accent-color: #f5576c;
+    cursor: pointer;
+}
+
+.boleta-item.bi-dudoso { border-left: 3px solid #f59f00; }
+
+.boleta-item.bi-resaltado {
+    outline: 2px solid #4fa8d8;
+    outline-offset: 2px;
+    transition: outline-color .3s;
+}
+
+.boleta-sticky {
+    position: sticky;
+    bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,.96);
+    backdrop-filter: blur(6px);
+    border: 1px solid #e9ecef;
+    border-radius: 14px;
+    padding: 10px 14px;
+    box-shadow: 0 -2px 16px rgba(0,0,0,.12);
+    z-index: 20;
+}
+.boleta-sticky .bs-suma {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 700;
+    color: #495057;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.boleta-sticky .btn { margin: 0; }
+
+/* ── Spinner inline para botones en operación async ── */
+.btn-spinner {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: -2px;
+}
+
+/* ── Campo con error de validación ── */
+.campo-error {
+    border-color: #f5576c !important;
+    animation: campoShake .3s ease;
+}
+@keyframes campoShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .campo-error { animation: none; }
+    .btn-spinner { animation-duration: 1.4s; }
+}

@@ -1,13 +1,25 @@
 // Preprocesado de imagen de boleta: carga, binarización y canvas para OCR / JPEG para IA.
 import { b } from './state.js';
 
-export function fileToImage(file) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => resolve(img);
-        img.onerror = reject;
-        img.src = URL.createObjectURL(file);
-    });
+// carga la foto respetando la orientación EXIF (las fotos de cámara suelen venir "acostadas"
+// en los bytes y solo el EXIF dice cómo pararlas). Fallback al <img> clásico si el navegador
+// no soporta createImageBitmap con opciones.
+export async function fileToImage(file) {
+    try {
+        return await createImageBitmap(file, { imageOrientation: 'from-image' });
+    } catch (e) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = URL.createObjectURL(file);
+        });
+    }
+}
+
+// dimensiones de HTMLImageElement o ImageBitmap
+function dimsDe(img) {
+    return { w: img.naturalWidth || img.width, h: img.naturalHeight || img.height };
 }
 
 // umbral de Otsu sobre un histograma de grises (d ya en gris: r=g=b)
@@ -72,7 +84,7 @@ export function sauvolaBinarize(px, w, h, win = 15, k = 0.34) {
 export function prepararCanvas(img, rot, targetMax = 2400, binarizar = false, extraDeg = 0) {
     const rad = (rot + extraDeg) * Math.PI / 180;
     const swap = (rot === 90 || rot === 270);
-    const w = img.naturalWidth, h = img.naturalHeight;
+    const { w, h } = dimsDe(img);
     const baseW = swap ? h : w, baseH = swap ? w : h;
     const scale = targetMax / Math.max(baseW, baseH);
     const cw = Math.round(baseW * scale);
@@ -109,7 +121,7 @@ export function boletaParaIA(maxLado = 1500) {
     const img = b.img;
     const rot = b.rot, extra = b.deskew;
     const swap = (rot === 90 || rot === 270);
-    const w = img.naturalWidth, h = img.naturalHeight;
+    const { w, h } = dimsDe(img);
     const baseW = swap ? h : w, baseH = swap ? w : h;
     const scale = Math.min(1, maxLado / Math.max(baseW, baseH));
     const cw = Math.round(baseW * scale), ch = Math.round(baseH * scale);

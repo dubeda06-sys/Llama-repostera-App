@@ -25,7 +25,7 @@ import {
 import { calcularPrecio, abrirRecetaEnCalc, guardarCostosReceta } from './calculadora.js';
 import { guardarConfig, cargarConfigEnUI } from './config.js';
 import { procesarBoleta, rotarBoleta } from './boleta/index.js';
-import { boletaEdit, boletaRematch, boletaQuitar, boletaFechaTodos, aplicarBoleta } from './boleta/preview.js';
+import { boletaEdit, boletaRematch, boletaQuitar, boletaFechaTodos, aplicarBoleta, boletaSel, boletaQuitarSel, boletaResaltar } from './boleta/preview.js';
 
 // ── Auth ─────────────────────────────────────────────────────
 // ¿la app corre instalada (standalone)? Ahí el popup de Google suele fallar → usamos redirect.
@@ -129,6 +129,9 @@ window.boletaEdit          = boletaEdit;
 window.boletaRematch       = boletaRematch;
 window.boletaQuitar        = boletaQuitar;
 window.boletaFechaTodos    = boletaFechaTodos;
+window.boletaSel           = boletaSel;
+window.boletaQuitarSel     = boletaQuitarSel;
+window.boletaResaltar      = boletaResaltar;
 window.aplicarBoleta       = aplicarBoleta;
 window.agregarCompra       = agregarCompra;
 window.eliminarCompra      = eliminarCompra;

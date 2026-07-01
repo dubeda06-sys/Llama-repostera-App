@@ -1,6 +1,6 @@
 // Códigos de barras: validación EAN-13, corrección por confusiones de OCR y match a insumo.
 import { insumoPorBarras } from '../insumos.js';
-import { matchInsumo } from '../match.js';
+import { matchInsumoScored } from '../match.js';
 
 // valida dígito verificador EAN-13 (descarta lecturas OCR erróneas)
 export function validarEAN(code) {
@@ -35,7 +35,8 @@ export function corregirEAN(ean) {
 }
 
 // resuelve el match de un ítem a partir de su EAN crudo y nombre.
-// devuelve { ean, eanOk, eanCorregido, insumoId, matchSource }
+// devuelve { ean, eanOriginal, eanOk, eanCorregido, insumoId, matchSource, candidatos }
+// candidatos = ids de insumos sugeridos por similitud de nombre (para el "★ sugerido" del preview)
 export function resolverMatch(eanRaw, nombre) {
     let ean = eanRaw, eanCorregido = false;
     let eanOk = ean ? validarEAN(ean) : false;
@@ -46,6 +47,11 @@ export function resolverMatch(eanRaw, nombre) {
         if (fix) { ean = fix.ean; eanOk = true; eanCorregido = true; insumo = fix.insumo; }
     }
     let matchSource = insumo ? 'ean' : null;
-    if (!insumo && nombre) { insumo = matchInsumo(nombre); if (insumo) matchSource = 'nombre'; }
-    return { ean, eanOk, eanCorregido, insumoId: insumo ? insumo.id : null, matchSource };
+    let candidatos = [];
+    if (nombre) {
+        const scored = matchInsumoScored(nombre);
+        candidatos = scored.slice(0, 3).map(x => x.insumo.id);
+        if (!insumo && scored.length) { insumo = scored[0].insumo; matchSource = 'nombre'; }
+    }
+    return { ean, eanOriginal: eanRaw || null, eanOk, eanCorregido, insumoId: insumo ? insumo.id : null, matchSource, candidatos };
 }

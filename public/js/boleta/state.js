@@ -5,6 +5,6 @@ export const b = {
     deskew: 0,       // inclinación residual fina en grados
     parsed: [],      // ítems detectados
     total: null,     // TOTAL impreso en la boleta (para cuadre)
-    fuente: 'ocr',   // 'ocr' (Tesseract) | 'ia' (Gemini afinó el resultado)
+    fuente: 'ia',    // 'ia' (Gemini, camino normal) | 'ocr' (Tesseract, degradado)
     iaAvisoMostrado: false // evita repetir el aviso "IA no disponible"
 };
