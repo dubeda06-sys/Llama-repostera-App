@@ -1,0 +1,196 @@
+// Preview editable de la boleta, overlay de carga con la llama y registro final en Firestore.
+import { db, collection, addDoc, updateDoc, doc } from '../firebase.js';
+import { state } from '../state.js';
+import { esc, toast, confirmar, hoyISO } from '../util.js';
+import { b } from './state.js';
+import { cuadreTol } from './config.js';
+import { resolverMatch } from './ean.js';
+import { sugerirCodigo, barrasDuplicado, renderInsumos, renderBarras } from '../insumos.js';
+import { registrarCompraCore, renderCompras } from '../compras.js';
+import { actualizarSelects, actualizarContadores } from '../render.js';
+import { renderRecetas } from '../recetas.js';
+import { calcularPrecio } from '../calculadora.js';
+
+export function setBoletaProgress(html) {
+    const el = document.getElementById('boletaProgress');
+    if (el) el.innerHTML = html;
+}
+
+// ── Ventana de carga: la llama repostera "pensando" mientras lee la boleta ──
+function overlayCargaBoleta() {
+    let el = document.getElementById('boletaCarga');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'boletaCarga';
+    el.className = 'boleta-carga';
+    el.hidden = true;
+    el.innerHTML = `
+        <div class="bc-card">
+            <div class="bc-llama-wrap">
+                <div class="bc-bubble"><span></span><span></span><span></span></div>
+                <img class="bc-llama" src="img/anim/loader/llama.png" alt="La llama pensando">
+            </div>
+            <div class="bc-title">La llama está pensando…</div>
+            <div class="bc-status" id="bcStatus"></div>
+            <div class="bc-bar"><div class="bc-bar-fill" id="bcBarFill"></div></div>
+            <div class="bc-pct" id="bcPct"></div>
+        </div>`;
+    document.body.appendChild(el);
+    return el;
+}
+
+// estado = texto bajo el título; pct = 0..1 (null → barra indeterminada)
+export function mostrarCargaBoleta(estado, pct = null) {
+    const el = overlayCargaBoleta();
+    el.hidden = false;
+    const st = document.getElementById('bcStatus');
+    const fill = document.getElementById('bcBarFill');
+    const pc = document.getElementById('bcPct');
+    if (st) st.textContent = estado || '';
+    if (pct == null) {
+        if (fill) { fill.classList.add('indet'); fill.style.width = ''; }
+        if (pc) pc.textContent = '';
+    } else {
+        const v = Math.round(pct * 100);
+        if (fill) { fill.classList.remove('indet'); fill.style.width = v + '%'; }
+        if (pc) pc.textContent = v + '%';
+    }
+}
+
+export function ocultarCargaBoleta() {
+    const el = document.getElementById('boletaCarga');
+    if (el) el.hidden = true;
+}
+
+function badgeMatchBoleta(r) {
+    const chip = (bg, txt) => `<span style="background:${bg};color:#fff;font-size:10px;padding:3px 7px;border-radius:8px;white-space:nowrap;">${txt}</span>`;
+    if (r.matchSource === 'ean')    return chip('#37b24d', r.eanCorregido ? '✓ código ✎' : '✓ código');
+    if (r.matchSource === 'nombre') return chip('#f59f00', 'por nombre');
+    return chip('#adb5bd', 'nuevo');
+}
+
+// banda de cuadre: compara la suma de ítems con el TOTAL impreso en la boleta
+function cuadreBoletaHtml(suma) {
+    if (!b.total) return '';
+    const dif = b.total - suma;
+    const cuadra = Math.abs(dif) <= cuadreTol(b.total); // tolerancia de redondeo
+    const cur = esc(state.currency);
+    if (cuadra) {
+        return `<div style="font-size:12.5px;color:#2b8a3e;background:#ebfbee;border:1px solid #b2f2bb;border-radius:8px;padding:7px 10px;margin-bottom:12px;">✓ Cuadra con el total de la boleta (${cur}${b.total.toLocaleString('es-CL')})</div>`;
+    }
+    const signo = dif > 0 ? 'faltan' : 'sobran';
+    return `<div style="font-size:12.5px;color:#a26312;background:#fff9db;border:1px solid #ffe066;border-radius:8px;padding:7px 10px;margin-bottom:12px;">⚠ No cuadra con la boleta: total impreso ${cur}${b.total.toLocaleString('es-CL')}, suma actual ${cur}${suma.toLocaleString('es-CL')} (${signo} ${cur}${Math.abs(dif).toLocaleString('es-CL')}). Revisa los precios en ámbar.</div>`;
+}
+
+export function renderBoletaPreview() {
+    const el = document.getElementById('boletaPreview');
+    if (!b.parsed.length) {
+        el.innerHTML = '<p style="color:#dc3545;font-size:13px;">No se detectaron productos. Prueba "🔄 Rotar 90°" o sube una foto más nítida y plana.</p>';
+        return;
+    }
+    const total = b.parsed.reduce((s, r) => s + (parseFloat(r.precio) || 0), 0);
+    const cuadre = cuadreBoletaHtml(total);
+    const fuenteHtml = b.fuente === 'ia'
+        ? `<div style="font-size:12px;color:#5f3dc4;background:#f3f0ff;border:1px solid #d0bfff;border-radius:8px;padding:6px 10px;margin-bottom:10px;display:inline-block;">✨ Afinado por la llama IA (la lectura básica no cuadraba)</div>`
+        : '';
+    el.innerHTML =
+        `<div style="font-size:13px;color:#495057;margin-bottom:10px;">🧾 <strong>${b.parsed.length}</strong> productos detectados · total ${esc(state.currency)}${total.toLocaleString('es-CL')} — revisa, corrige y registra:</div>
+         ${fuenteHtml}
+         ${cuadre}
+         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <label style="font-size:13px;color:#6c757d;">Fecha de compra</label>
+            <input type="date" id="boletaFecha" value="${b.parsed[0] ? b.parsed[0].fecha : hoyISO()}" onchange="boletaFechaTodos(this.value)" style="padding:6px 10px;border:2px solid #e9ecef;border-radius:8px;">
+         </div>` +
+        b.parsed.map((r, i) => {
+            const pBorde = r.precio <= 0 ? '#dc3545' : (r.conf != null && r.conf < 70 ? '#f59f00' : '#e9ecef');
+            const pTitle = r.precio <= 0 ? '⚠ No se leyó bien el precio — corrígelo' : (r.conf != null && r.conf < 70 ? '⚠ Lectura de baja confianza — verifica el precio' : 'Precio total pagado');
+            return `
+        <div class="boleta-item">
+            <div class="bi-head">
+                <span class="bi-badge" title="${r.ean || 'sin código de barras'}">${badgeMatchBoleta(r)}</span>
+                <input class="bi-nombre" type="text" value="${esc(r.nombreRaw || '')}" oninput="boletaEdit(${i},'nombreRaw',this.value)" onchange="boletaRematch(${i})" placeholder="Producto">
+                <button class="bi-del" onclick="boletaQuitar(${i})" title="Quitar producto">✕</button>
+            </div>
+            <div class="bi-grid">
+                <label class="bi-f">Cantidad
+                    <input type="number" value="${r.cantidad}" step="0.001" inputmode="decimal" oninput="boletaEdit(${i},'cantidad',this.value)">
+                </label>
+                <label class="bi-f">Unidad
+                    <select onchange="boletaEdit(${i},'unidad',this.value)">
+                        ${['g', 'kg', 'ml', 'l', 'unidad'].map(u => `<option value="${u}" ${u === r.unidad ? 'selected' : ''}>${u}</option>`).join('')}
+                    </select>
+                </label>
+                <label class="bi-f">Precio total
+                    <input type="number" value="${r.precio}" step="1" inputmode="numeric" title="${pTitle}" style="border-color:${pBorde};" oninput="boletaEdit(${i},'precio',this.value)">
+                </label>
+            </div>
+            <label class="bi-f bi-insumo">¿Qué insumo es?
+                <select onchange="boletaEdit(${i},'insumoId',this.value)">
+                    <option value="__new__" ${!r.insumoId ? 'selected' : ''}>➕ Crear "${esc(r.nombreRaw)}"</option>
+                    ${state.insumos.map(ins => `<option value="${ins.id}" ${ins.id === r.insumoId ? 'selected' : ''}>${esc(ins.nombre)}</option>`).join('')}
+                </select>
+            </label>
+        </div>`;
+        }).join('') +
+        `<p style="font-size:11px;color:#adb5bd;margin:8px 0;">Los productos nuevos se crean con su código de barras (EAN); los existentes quedan ligados a ese EAN para reconocerse solos en la próxima boleta.</p>
+         <button class="btn btn-success" style="margin-top:6px;" onclick="aplicarBoleta()">✓ Registrar ${b.parsed.length} compras</button>`;
+}
+
+export function boletaFechaTodos(v) { b.parsed.forEach(r => r.fecha = v); }
+
+export function boletaEdit(i, campo, valor) {
+    if (campo === 'cantidad' || campo === 'precio') b.parsed[i][campo] = parseFloat(valor) || 0;
+    else if (campo === 'insumoId') b.parsed[i].insumoId = (valor === '__new__') ? null : valor;
+    else b.parsed[i][campo] = valor;
+}
+
+export function boletaRematch(i) {
+    const r = b.parsed[i];
+    const m = resolverMatch(r.ean, (r.nombreRaw || '').trim());
+    Object.assign(r, m); // ean, eanOk, eanCorregido, insumoId, matchSource
+    renderBoletaPreview();
+}
+
+export function boletaQuitar(i) { b.parsed.splice(i, 1); renderBoletaPreview(); }
+
+export async function aplicarBoleta() {
+    if (!b.parsed.length) return;
+    if (!(await confirmar(`¿Registrar ${b.parsed.length} compras de la boleta?`))) return;
+    const nuevos = {}; // clave (ean|nombre) → id, evita duplicar creaciones
+    let ok = 0;
+    for (const r of b.parsed) {
+        if (!r.cantidad || !r.precio) continue;
+        const eanUse = (r.ean && r.eanOk) ? r.ean : null; // solo EAN válidos
+        let insumoId = r.insumoId;
+        if (!insumoId) {
+            const clave = (eanUse || r.nombreRaw.toLowerCase());
+            if (nuevos[clave]) insumoId = nuevos[clave];
+            else {
+                const codigo = sugerirCodigo(r.nombreRaw);
+                const datos = { codigo, nombre: r.nombreRaw, codigosBarras: eanUse ? [eanUse] : [], precio: null, unidadBase: null, fechaCreacion: new Date().toISOString() };
+                const ref = await addDoc(collection(db, 'insumos'), datos);
+                state.insumos.push({ id: ref.id, ...datos });
+                insumoId = ref.id;
+                nuevos[clave] = insumoId;
+            }
+        } else if (eanUse) {
+            // auto-indexar: ligar EAN válido al insumo existente si aún no lo tiene
+            const ins = state.insumos.find(x => x.id === insumoId);
+            if (ins && !(ins.codigosBarras || []).includes(eanUse) && !barrasDuplicado(eanUse, insumoId)) {
+                const nb = [...(ins.codigosBarras || []), eanUse];
+                await updateDoc(doc(db, 'insumos', insumoId), { codigosBarras: nb });
+                ins.codigosBarras = nb;
+            }
+        }
+        await registrarCompraCore(insumoId, r.cantidad, r.unidad, r.precio, r.fecha || hoyISO());
+        ok++;
+    }
+    b.parsed = [];
+    b.img = null; b.rot = 0; b.deskew = 0; b.total = null; b.fuente = 'ocr';
+    document.getElementById('boletaPreview').innerHTML = '';
+    document.getElementById('boletaProgress').innerHTML = '';
+    document.getElementById('boletaRotar').style.display = 'none';
+    const fi = document.getElementById('boletaFile'); if (fi) fi.value = '';
+    renderCompras(); renderInsumos(); renderBarras(); actualizarSelects(); actualizarContadores(); calcularPrecio(); renderRecetas();
+    toast(`${ok} compras registradas desde la boleta`);
+}

@@ -2,6 +2,7 @@
   "name": "llama-repostera",
   "version": "2.0.0",
   "private": true,
+  "type": "module",
   "description": "Llama Repostera — gestor de costos de repostería (PWA en Firebase Hosting)",
   "scripts": {
     "serve": "firebase emulators:start --only hosting",
