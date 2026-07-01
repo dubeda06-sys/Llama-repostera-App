@@ -32,8 +32,20 @@ export function actualizarCalcSelect() {
         state.recetas.map(r => `<option value="${r.id}">${esc(r.nombre)}</option>`).join('');
 }
 
+// contador con "pop" cuando cambia el valor (reusa la animación badgePop de las cards)
+function setContador(id, valor) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const nuevo = String(valor);
+    if (el.textContent === nuevo) return;
+    el.textContent = nuevo;
+    el.classList.remove('pop');
+    void el.offsetWidth; // reinicia la animación
+    el.classList.add('pop');
+}
+
 export function actualizarContadores() {
-    document.getElementById('countInsumos').textContent = state.insumos.length;
-    document.getElementById('countCompras').textContent = state.compras.length;
-    document.getElementById('countRecetas').textContent = state.recetas.length;
+    setContador('countInsumos', state.insumos.length);
+    setContador('countCompras', state.compras.length);
+    setContador('countRecetas', state.recetas.length);
 }

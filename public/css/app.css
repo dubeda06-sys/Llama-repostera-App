@@ -1242,3 +1242,102 @@ th { background: #f8f9fa; font-weight: 600; color: #495057; }
     .campo-error { animation: none; }
     .btn-spinner { animation-duration: 1.4s; }
 }
+
+/* ── La llama mascota: empty states con globo de diálogo ── */
+.llama-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 34px 20px;
+    text-align: center;
+}
+.llama-empty .le-bubble {
+    position: relative;
+    max-width: 380px;
+    background: #fff;
+    border: 2px solid #ffe3e9;
+    border-radius: 16px;
+    padding: 14px 18px;
+    font-size: 14.5px;
+    color: #495057;
+    line-height: 1.5;
+    box-shadow: 0 4px 14px rgba(245,87,108,.08);
+}
+.llama-empty .le-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -9px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-right: 2px solid #ffe3e9;
+    border-bottom: 2px solid #ffe3e9;
+}
+.llama-empty .le-img {
+    width: 110px;
+    height: 110px;
+    object-fit: contain;
+    animation: floatBob 3.5s ease-in-out infinite;
+}
+.llama-empty .es-cta { margin-top: 4px; }
+
+/* ── Toast de celebración: mini llama + chispitas ── */
+.toast-celebra {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
+    color: #fff;
+    font-weight: 700;
+    overflow: visible !important;
+}
+.toast-celebra .tc-llama {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    animation: wiggle .8s ease 1;
+}
+.chispas { position: absolute; inset: 0; pointer-events: none; }
+.chispa {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 2px;
+    opacity: 0;
+    animation: chispaPop 1s ease-out .1s 1;
+}
+.chispa:nth-child(3n)   { background: #ffd43b; }
+.chispa:nth-child(3n+1) { background: #74c0fc; border-radius: 50%; }
+.chispa:nth-child(3n+2) { background: #b2f2bb; }
+.chispa-0  { --dx: -70px; --dy: -46px; } .chispa-1  { --dx: 62px;  --dy: -52px; }
+.chispa-2  { --dx: -38px; --dy: -66px; } .chispa-3  { --dx: 42px;  --dy: -64px; }
+.chispa-4  { --dx: -86px; --dy: -18px; } .chispa-5  { --dx: 80px;  --dy: -24px; }
+.chispa-6  { --dx: -56px; --dy: -58px; } .chispa-7  { --dx: 24px;  --dy: -72px; }
+.chispa-8  { --dx: -14px; --dy: -70px; } .chispa-9  { --dx: 70px;  --dy: -40px; }
+.chispa-10 { --dx: -78px; --dy: -34px; } .chispa-11 { --dx: 10px;  --dy: -80px; }
+@keyframes chispaPop {
+    0%   { opacity: 0; transform: translate(0,0) scale(.4) rotate(0deg); }
+    15%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1) rotate(200deg); }
+}
+
+/* pop del contador del dashboard cuando cambia */
+.nc-count.pop { animation: badgePop .45s ease; }
+
+/* ── Touch targets cómodos en celular (mínimo ~44px) ── */
+.btn-sm { min-height: 42px; }
+.bi-del { min-width: 44px; min-height: 44px; }
+.bi-check { width: 22px; height: 22px; min-width: 22px; }
+
+@media (prefers-reduced-motion: reduce) {
+    .llama-empty .le-img { animation: none; }
+    .toast-celebra .tc-llama { animation: none; }
+    .chispa { animation: none; display: none; }
+    .nc-count.pop { animation: none; }
+}

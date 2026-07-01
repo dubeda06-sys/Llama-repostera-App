@@ -1,10 +1,11 @@
 // Insumos: CRUD, emojis, tarjetas, códigos de barra y sugeridos.
 import { db, collection, addDoc, deleteDoc, updateDoc, doc } from './firebase.js';
 import { state } from './state.js';
-import { esc, toast, confirmar, quitarAcentos } from './util.js';
+import { esc, toast, confirmar, quitarAcentos, btnLoading, marcarError } from './util.js';
 import { actualizarSelects, actualizarContadores } from './render.js';
 import { renderRecetas } from './recetas.js';
 import { calcularPrecio } from './calculadora.js';
+import { llamaHtml } from './ui/llama.js';
 
 // SKU correlativo: 3 primeras letras del nombre + número, evita colisiones
 export function sugerirCodigo(nombre) {
@@ -152,7 +153,10 @@ export function renderInsumos() {
     const el = document.getElementById('listaInsumos');
     if (!el) return;
     if (!state.insumos.length) {
-        el.innerHTML = '<div class="empty-state"><div class="es-icon">📦</div><p>No hay insumos registrados</p><button class="es-cta" onclick="insumosTab(\'ingresar\')">+ Agregar primer insumo</button></div>';
+        el.innerHTML = llamaHtml(
+            '¡Hola! Aún no tienes insumos. Escanea tu primera boleta y <strong>yo hago el resto</strong> 🧾 — o agrega uno a mano.',
+            { cta: { texto: '➕ Agregar mi primer insumo', onclick: "insumosTab('ingresar')" } }
+        );
         return;
     }
     // filtro de texto (nombre o código)
@@ -183,18 +187,25 @@ export function renderInsumos() {
         grupo('Sin precio', '#f59f00', '🏷️', sinPrecio, 'Estos aún no tienen costo. Registra una compra (o escanea una boleta) para que tomen precio.');
 }
 
-export async function agregarInsumo() {
-    const nombre = document.getElementById('insumoNombre').value.trim();
+export async function agregarInsumo(btn) {
+    const nombreEl = document.getElementById('insumoNombre');
+    const nombre = nombreEl.value.trim();
     const codigoBarras = document.getElementById('insumoBarras').value.trim();
     let codigo = document.getElementById('insumoCodigo').value.trim().toUpperCase();
-    if (!nombre) return toast('Ingresa el nombre del insumo', 'error');
+    if (!nombre) { marcarError(nombreEl); return toast('Ingresa el nombre del insumo', 'error'); }
     if (!codigo) codigo = sugerirCodigo(nombre);
-    if (codigoBarras && barrasDuplicado(codigoBarras)) return toast('Ese código de barras ya está ligado a otro producto', 'error');
+    if (codigoBarras && barrasDuplicado(codigoBarras)) { marcarError(document.getElementById('insumoBarras')); return toast('Ese código de barras ya está ligado a otro producto', 'error'); }
     const datos = { codigo, nombre, codigosBarras: codigoBarras ? [codigoBarras] : [], precio: null, unidadBase: null, fechaCreacion: new Date().toISOString() };
-    const ref = await addDoc(collection(db, 'insumos'), datos);
-    state.insumos.push({ id: ref.id, ...datos });
+    const done = btnLoading(btn, 'Agregando…');
+    try {
+        const ref = await addDoc(collection(db, 'insumos'), datos);
+        state.insumos.push({ id: ref.id, ...datos });
+    } catch (e) {
+        console.error(e);
+        return toast('No se pudo guardar el insumo — revisa tu conexión', 'error');
+    } finally { done(); }
     const codEl = document.getElementById('insumoCodigo');
-    document.getElementById('insumoNombre').value = '';
+    nombreEl.value = '';
     document.getElementById('insumoBarras').value = '';
     codEl.value = ''; codEl.dataset.manual = '';
     renderInsumos();
@@ -276,18 +287,26 @@ export function lookupBarras(codigo) {
     }
 }
 
-export async function ligarBarras() {
-    const codigo = document.getElementById('barrasCodigo').value.trim();
+export async function ligarBarras(btn) {
+    const codigoEl = document.getElementById('barrasCodigo');
+    const codigo = codigoEl.value.trim();
     const insumoId = document.getElementById('barrasInsumo').value;
-    if (!codigo) return toast('Escanea o escribe un código de barras', 'error');
-    if (!insumoId) return toast('Selecciona el producto a ligar', 'error');
+    if (!codigo) { marcarError(codigoEl); return toast('Escanea o escribe un código de barras', 'error'); }
+    if (!insumoId) { marcarError(document.getElementById('barrasInsumo')); return toast('Selecciona el producto a ligar', 'error'); }
     if (barrasDuplicado(codigo)) {
         const ya = insumoPorBarras(codigo);
+        marcarError(codigoEl);
         return toast(`Ese código ya está ligado a "${ya.nombre}"`, 'error');
     }
     const ins = state.insumos.find(i => i.id === insumoId);
     const nuevos = [...(ins.codigosBarras || []), codigo];
-    await updateDoc(doc(db, 'insumos', insumoId), { codigosBarras: nuevos });
+    const done = btnLoading(btn, 'Ligando…');
+    try {
+        await updateDoc(doc(db, 'insumos', insumoId), { codigosBarras: nuevos });
+    } catch (e) {
+        console.error(e);
+        return toast('No se pudo ligar el código — revisa tu conexión', 'error');
+    } finally { done(); }
     ins.codigosBarras = nuevos;
     document.getElementById('barrasCodigo').value = '';
     document.getElementById('barrasLookup').innerHTML = '';

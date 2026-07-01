@@ -1,7 +1,8 @@
 // Preview editable de la boleta, overlay de carga con la llama y registro final en Firestore.
 import { db, collection, addDoc, updateDoc, doc } from '../firebase.js';
 import { state } from '../state.js';
-import { esc, toast, confirmar, hoyISO } from '../util.js';
+import { esc, toast, confirmar, hoyISO, btnLoading } from '../util.js';
+import { celebrar } from '../ui/llama.js';
 import { b } from './state.js';
 import { CONF_MIN, cuadreTol } from './config.js';
 import { resolverMatch } from './ean.js';
@@ -113,7 +114,7 @@ function stickyBarHtml(suma) {
     return `<div class="boleta-sticky" id="boletaSticky">
         <div class="bs-suma" id="bsSuma">Suma ${cur}${suma.toLocaleString('es-CL')}${totalTxt}</div>
         ${sel ? `<button class="btn btn-danger btn-sm" onclick="boletaQuitarSel()">🗑 Quitar ${sel}</button>` : ''}
-        <button class="btn btn-success" onclick="aplicarBoleta()">✓ Registrar ${b.parsed.length}</button>
+        <button class="btn btn-success" onclick="aplicarBoleta(this)">✓ Registrar ${b.parsed.length}</button>
     </div>`;
 }
 
@@ -234,9 +235,11 @@ export function boletaResaltar(tipo) {
     setTimeout(() => document.querySelectorAll('.bi-resaltado').forEach(el => el.classList.remove('bi-resaltado')), 2500);
 }
 
-export async function aplicarBoleta() {
+export async function aplicarBoleta(btn) {
     if (!b.parsed.length) return;
     if (!(await confirmar(`¿Registrar ${b.parsed.length} compras de la boleta?`))) return;
+    const done = btnLoading(btn, 'Registrando…');
+    try {
     const nuevos = {}; // clave (ean|nombre) → id, evita duplicar creaciones
     let ok = 0;
     for (const r of b.parsed) {
@@ -273,5 +276,9 @@ export async function aplicarBoleta() {
     document.getElementById('boletaRotar').style.display = 'none';
     const fi = document.getElementById('boletaFile'); if (fi) fi.value = '';
     renderCompras(); renderInsumos(); renderBarras(); actualizarSelects(); actualizarContadores(); calcularPrecio(); renderRecetas();
-    toast(`${ok} compras registradas desde la boleta`);
+    celebrar(`¡${ok} compras registradas desde la boleta! 🎉`);
+    } catch (e) {
+        console.error(e);
+        toast('Algo falló registrando la boleta — revisa tu conexión e inténtalo de nuevo', 'error');
+    } finally { done(); }
 }

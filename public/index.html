@@ -139,7 +139,7 @@
                         </div>
                         <div style="padding-bottom:1px">
                             <label>&nbsp;</label>
-                            <button class="btn btn-primary" onclick="agregarInsumo()">+ Agregar</button>
+                            <button class="btn btn-primary" onclick="agregarInsumo(this)">+ Agregar</button>
                         </div>
                     </div>
 
@@ -166,7 +166,7 @@
                                 </div>
                                 <div style="padding-bottom:1px">
                                     <label>&nbsp;</label>
-                                    <button class="btn btn-primary" onclick="ligarBarras()">🔗 Ligar</button>
+                                    <button class="btn btn-primary" onclick="ligarBarras(this)">🔗 Ligar</button>
                                 </div>
                             </div>
                             <div id="barrasLookup" style="min-height:20px; font-size:13px; margin-bottom:14px;"></div>
@@ -220,7 +220,7 @@
                         <input type="date" id="compraFecha">
                     </div>
                 </div>
-                <button class="btn btn-success" onclick="agregarCompra()">Registrar Compra</button>
+                <button class="btn btn-success" onclick="agregarCompra(this)">Registrar Compra</button>
 
                 <div id="listaCompras"><div class="spinner"></div></div>
             </div>
@@ -285,7 +285,7 @@
                     </div>
                 </div>
 
-                <button class="btn btn-success" onclick="guardarReceta()">Guardar Receta</button>
+                <button class="btn btn-success" onclick="guardarReceta(this)">Guardar Receta</button>
 
                 <div id="listaRecetas" style="margin-top:24px;"><div class="spinner"></div></div>
             </div>
@@ -401,7 +401,7 @@
     </div>
 
         <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-        <script type="module" src="js/main.js?v=gemini1"></script>
+        <script type="module" src="js/main.js?v=tierno1"></script>
         <script>
             // registra el service worker (PWA instalable); tolerante a fallos
             if ('serviceWorker' in navigator) {

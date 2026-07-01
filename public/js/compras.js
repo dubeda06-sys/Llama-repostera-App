@@ -1,17 +1,21 @@
 // Compras: tabla, registro manual y núcleo compartido con el lector de boletas.
 import { db, collection, addDoc, deleteDoc, updateDoc, doc } from './firebase.js';
 import { state } from './state.js';
-import { esc, toast, confirmar } from './util.js';
+import { esc, toast, confirmar, btnLoading, marcarError } from './util.js';
 import { FACTORS } from './units.js';
 import { actualizarContadores } from './render.js';
 import { renderInsumos } from './insumos.js';
 import { renderRecetas } from './recetas.js';
 import { calcularPrecio } from './calculadora.js';
+import { llamaHtml, celebrar } from './ui/llama.js';
 
 export function renderCompras() {
     const el = document.getElementById('listaCompras');
     if (!state.compras.length) {
-        el.innerHTML = '<div class="empty-state" style="margin-top:20px;"><div class="es-icon">🛒</div><p>No hay compras registradas</p></div>';
+        el.innerHTML = llamaHtml(
+            'Todavía no hay compras. Sácale una foto a tu boleta y <strong>yo la leo con mi súper vista</strong> 📷',
+            { cta: { texto: '📷 Escanear boleta', onclick: "document.getElementById('boletaFile').click()" } }
+        );
         return;
     }
     const sorted = [...state.compras].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
@@ -51,15 +55,25 @@ export async function registrarCompraCore(insumoId, cantidad, unidad, precio, fe
     }
 }
 
-export async function agregarCompra() {
+export async function agregarCompra(btn) {
     const insumoId = document.getElementById('compraInsumo').value;
     const cantidad = parseFloat(document.getElementById('compraCantidad').value);
     const unidad   = document.getElementById('compraUnidad').value;
     const precio   = parseFloat(document.getElementById('compraPrecio').value);
     const fecha    = document.getElementById('compraFecha').value;
-    if (!insumoId || !cantidad || !precio || !fecha) return toast('Completa todos los campos', 'error');
+    // marcar el primer campo faltante en vez de solo un toast seco
+    if (!insumoId)  { marcarError(document.getElementById('compraInsumo'));  return toast('Elige el insumo comprado', 'error'); }
+    if (!cantidad)  { marcarError(document.getElementById('compraCantidad')); return toast('Ingresa la cantidad', 'error'); }
+    if (!precio)    { marcarError(document.getElementById('compraPrecio'));  return toast('Ingresa el precio pagado', 'error'); }
+    if (!fecha)     { marcarError(document.getElementById('compraFecha'));   return toast('Elige la fecha de compra', 'error'); }
 
-    await registrarCompraCore(insumoId, cantidad, unidad, precio, fecha);
+    const done = btnLoading(btn, 'Registrando…');
+    try {
+        await registrarCompraCore(insumoId, cantidad, unidad, precio, fecha);
+    } catch (e) {
+        console.error(e);
+        return toast('No se pudo registrar la compra — revisa tu conexión', 'error');
+    } finally { done(); }
 
     document.getElementById('compraCantidad').value = '';
     document.getElementById('compraPrecio').value = '';
@@ -68,7 +82,7 @@ export async function agregarCompra() {
     renderRecetas();
     calcularPrecio();
     actualizarContadores();
-    toast('Compra registrada');
+    toast('Compra registrada 🛒');
 }
 
 export async function eliminarCompra(id) {

@@ -1,12 +1,13 @@
 // Recetas: CRUD, edición inline, ingredientes temporales e importador desde texto.
 import { db, collection, addDoc, deleteDoc, updateDoc, doc } from './firebase.js';
 import { state } from './state.js';
-import { esc, toast, confirmar, quitarAcentos } from './util.js';
+import { esc, toast, confirmar, quitarAcentos, btnLoading, marcarError } from './util.js';
 import { unidadesCompatibles, UNIDAD_MAP } from './units.js';
 import { matchInsumo } from './match.js';
 import { sugerirCodigo, renderInsumos } from './insumos.js';
 import { actualizarSelects, actualizarContadores, actualizarCalcSelect } from './render.js';
 import { calcularCostoReceta, avisosReceta } from './calculadora.js';
+import { llamaHtml, celebrar } from './ui/llama.js';
 
 // icono de repostería fiel al tipo de receta. Devuelve el SLUG de un SVG en
 // img/icons/ (set fluent-emoji-flat de Iconify). Orden = de lo más específico a lo
@@ -40,7 +41,10 @@ function iconReceta(nombre) {
 export function renderRecetas() {
     const el = document.getElementById('listaRecetas');
     if (!state.recetas.length) {
-        el.innerHTML = '<div class="empty-state"><div class="es-icon">📖</div><p>No hay recetas guardadas</p><button class="es-cta" onclick="document.getElementById(\'recetaNombre\').focus()">+ Crear primera receta</button></div>';
+        el.innerHTML = llamaHtml(
+            'Sin recetas todavía… ¿partimos con tu <strong>torta estrella</strong>? 🎂 También puedes pegar una receta en texto y yo la interpreto.',
+            { cta: { texto: '✨ Crear mi primera receta', onclick: "document.getElementById('recetaNombre').focus()" } }
+        );
         return;
     }
     el.innerHTML = state.recetas.map(r => {
@@ -136,7 +140,8 @@ export function agregarIngrediente() {
     const insumoId = document.getElementById('ingredienteInsumo').value;
     const cantidad = parseFloat(document.getElementById('ingredienteCantidad').value);
     const unidad   = document.getElementById('ingredienteUnidad').value;
-    if (!insumoId || !cantidad) return toast('Selecciona insumo e ingresa cantidad', 'error');
+    if (!insumoId) { marcarError(document.getElementById('ingredienteInsumo')); return toast('Selecciona el insumo', 'error'); }
+    if (!cantidad) { marcarError(document.getElementById('ingredienteCantidad')); return toast('Ingresa la cantidad', 'error'); }
     if (state.ingredientesTemp.find(i => i.insumoId === insumoId)) return toast('Ingrediente ya agregado', 'error');
     const ins = state.insumos.find(i => i.id === insumoId);
     state.ingredientesTemp.push({ insumoId, codigo: ins.codigo || '', nombre: ins.nombre, unidad: unidad || ins.unidad, cantidad });
@@ -160,10 +165,11 @@ export function renderIngredientesTemp() {
     `).join('');
 }
 
-export async function guardarReceta() {
-    const nombre    = document.getElementById('recetaNombre').value.trim();
+export async function guardarReceta(btn) {
+    const nombreEl  = document.getElementById('recetaNombre');
+    const nombre    = nombreEl.value.trim();
     const porciones = parseInt(document.getElementById('recetaPorciones').value);
-    if (!nombre) return toast('Ingresa el nombre de la receta', 'error');
+    if (!nombre) { marcarError(nombreEl); return toast('Ingresa el nombre de la receta', 'error'); }
     if (!state.ingredientesTemp.length) return toast('Agrega al menos un ingrediente', 'error');
     const costos = {
         horas: 0,
@@ -173,16 +179,22 @@ export async function guardarReceta() {
         margen:     state.settings.margenDefault     || 0,
         competencia: 0
     };
-    const ref = await addDoc(collection(db, 'recetas'), { nombre, porciones, ingredientes: [...state.ingredientesTemp], costos, fechaCreacion: new Date().toISOString() });
-    state.recetas.push({ id: ref.id, nombre, porciones, ingredientes: [...state.ingredientesTemp], costos });
-    document.getElementById('recetaNombre').value = '';
+    const done = btnLoading(btn, 'Guardando…');
+    try {
+        const ref = await addDoc(collection(db, 'recetas'), { nombre, porciones, ingredientes: [...state.ingredientesTemp], costos, fechaCreacion: new Date().toISOString() });
+        state.recetas.push({ id: ref.id, nombre, porciones, ingredientes: [...state.ingredientesTemp], costos });
+    } catch (e) {
+        console.error(e);
+        return toast('No se pudo guardar la receta — revisa tu conexión', 'error');
+    } finally { done(); }
+    nombreEl.value = '';
     document.getElementById('recetaPorciones').value = '1';
     state.ingredientesTemp = [];
     renderIngredientesTemp();
     renderRecetas();
     actualizarContadores();
     actualizarCalcSelect();
-    toast(`Receta "${nombre}" guardada`);
+    celebrar(`¡Receta "${nombre}" guardada! 🎂`);
 }
 
 export async function eliminarReceta(id) {
