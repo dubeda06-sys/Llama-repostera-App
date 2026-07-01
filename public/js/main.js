@@ -13,7 +13,7 @@ import {
     normalizarInsumo, agregarInsumo, insumosTab, autoCodigo, eliminarInsumo,
     toggleBarras, lookupBarras, ligarBarras, eliminarBarras,
     iniciarEdicion, cancelarEdicion, guardarEdicion,
-    filtrarSugeridos, mostrarSugeridos, seleccionarSugerido
+    filtrarSugeridos, mostrarSugeridos, seleccionarSugerido, renderInsumos
 } from './insumos.js';
 import { agregarCompra, eliminarCompra } from './compras.js';
 import {
@@ -114,6 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.openSection         = openSection;
 window.goBack              = goBack;
 window.agregarInsumo       = agregarInsumo;
+window.renderInsumos       = renderInsumos; // filtro de insumos (oninput) — faltaba en la versión anterior
 window.insumosTab          = insumosTab;
 window.autoCodigo          = autoCodigo;
 window.eliminarInsumo      = eliminarInsumo;
