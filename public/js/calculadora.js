@@ -69,7 +69,7 @@ export function calcularPrecio() {
 
     const avisos = avisosReceta(receta);
     const avisoHtml = avisos.length
-        ? `<div style="background:#fff3cd; color:#856404; padding:12px 16px; border-radius:10px; margin-bottom:14px; font-size:13px;">⚠️ Costo incompleto — ${avisos.join(' · ')}</div>`
+        ? `<div class="calc-aviso">⚠️ Costo incompleto — ${avisos.join(' · ')}</div>`
         : '';
 
     const cur = state.currency;
@@ -91,7 +91,7 @@ export function calcularPrecio() {
             msg = `✓ Tu sugerido (${esc(cur)}${porPorcion.toFixed(2)}) está bajo la competencia (${esc(cur)}${competencia.toFixed(2)}). Margen para subir precio.`;
             color = '#28a745';
         }
-        compHtml = `<div style="background:white; border:2px solid ${color}; color:${color}; padding:12px 16px; border-radius:10px; margin-top:14px; font-size:13px;">${msg}</div>`;
+        compHtml = `<div class="calc-comp" style="--comp-color:${color};">${msg}</div>`;
     }
 
     el.innerHTML = avisoHtml + `

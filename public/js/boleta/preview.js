@@ -64,7 +64,7 @@ export function ocultarCargaBoleta() {
 }
 
 function badgeMatchBoleta(r) {
-    const chip = (bg, txt) => `<span style="background:${bg};color:#fff;font-size:10px;padding:3px 7px;border-radius:8px;white-space:nowrap;">${txt}</span>`;
+    const chip = (bg, txt) => `<span class="bp-chip" style="--accent-chip:${bg};">${txt}</span>`;
     if (r.matchSource === 'ean')    return chip('#37b24d', r.eanCorregido ? '✓ código ✎' : '✓ código');
     if (r.matchSource === 'nombre') return chip('#f59f00', 'por nombre');
     return chip('#adb5bd', 'nuevo');
@@ -73,7 +73,7 @@ function badgeMatchBoleta(r) {
 // nota de transparencia cuando el EAN fue corregido: qué se leyó y qué quedó
 function eanCorregidoHtml(r) {
     if (!r.eanCorregido || !r.eanOriginal || r.eanOriginal === r.ean) return '';
-    return `<div style="font-size:11px;color:#5f3dc4;margin:2px 0 0 4px;">✎ Leí <s>…${esc(String(r.eanOriginal).slice(-4))}</s>, lo corregí a <strong>…${esc(String(r.ean).slice(-4))}</strong> (dígito verificador)</div>`;
+    return `<div class="bp-ean-nota">✎ Leí <s>…${esc(String(r.eanOriginal).slice(-4))}</s>, lo corregí a <strong>…${esc(String(r.ean).slice(-4))}</strong> (dígito verificador)</div>`;
 }
 
 function sumaParsed() {
@@ -87,10 +87,10 @@ function cuadreBoletaHtml(suma) {
     const cuadra = Math.abs(dif) <= cuadreTol(b.total);
     const cur = esc(state.currency);
     if (cuadra) {
-        return `<div style="font-size:12.5px;color:#2b8a3e;background:#ebfbee;border:1px solid #b2f2bb;border-radius:8px;padding:7px 10px;margin-bottom:12px;">✓ Cuadra con el total de la boleta (${cur}${b.total.toLocaleString('es-CL')})</div>`;
+        return `<div class="bp-cuadre bp-cuadre-ok">✓ Cuadra con el total de la boleta (${cur}${b.total.toLocaleString('es-CL')})</div>`;
     }
     const signo = dif > 0 ? 'faltan' : 'sobran';
-    return `<div style="font-size:12.5px;color:#a26312;background:#fff9db;border:1px solid #ffe066;border-radius:8px;padding:7px 10px;margin-bottom:12px;">⚠ No cuadra con la boleta: total impreso ${cur}${b.total.toLocaleString('es-CL')}, suma actual ${cur}${suma.toLocaleString('es-CL')} (${signo} ${cur}${Math.abs(dif).toLocaleString('es-CL')}). Revisa los precios en ámbar.</div>`;
+    return `<div class="bp-cuadre bp-cuadre-off">⚠ No cuadra con la boleta: total impreso ${cur}${b.total.toLocaleString('es-CL')}, suma actual ${cur}${suma.toLocaleString('es-CL')} (${signo} ${cur}${Math.abs(dif).toLocaleString('es-CL')}). Revisa los precios en ámbar.</div>`;
 }
 
 // chips resumen por tipo de match; tocar un chip resalta sus filas
@@ -141,24 +141,24 @@ function opcionesInsumoHtml(r) {
 export function renderBoletaPreview() {
     const el = document.getElementById('boletaPreview');
     if (!b.parsed.length) {
-        el.innerHTML = `<div style="display:flex;gap:12px;align-items:center;background:#fff5f5;border:1px solid #ffc9c9;border-radius:12px;padding:14px;">
-            <img src="img/anim/loader/llama.png" alt="" style="width:56px;height:56px;object-fit:contain;">
-            <p style="color:#c92a2a;font-size:13px;margin:0;">¡Uy! No pude leer productos en esa foto. Prueba con una foto más nítida, plana y con buena luz — ¡yo pongo la súper vista! 🦙</p>
+        el.innerHTML = `<div class="bp-vacio">
+            <img src="img/anim/loader/llama.png" alt="">
+            <p>¡Uy! No pude leer productos en esa foto. Prueba con una foto más nítida, plana y con buena luz — ¡yo pongo la súper vista! 🦙</p>
         </div>`;
         return;
     }
     const total = sumaParsed();
     const fuenteHtml = b.fuente === 'ia'
-        ? `<div style="font-size:12px;color:#5f3dc4;background:#f3f0ff;border:1px solid #d0bfff;border-radius:8px;padding:6px 10px;margin-bottom:10px;display:inline-block;">✨ Leída por la llama IA — revisa y registra</div>`
-        : `<div style="font-size:12px;color:#a26312;background:#fff9db;border:1px solid #ffe066;border-radius:8px;padding:6px 10px;margin-bottom:10px;display:inline-block;">🔍 Lectura local (la IA no estaba disponible) — revisa con más cuidado</div>`;
+        ? `<div class="bp-fuente bp-fuente-ia">✨ Leída por la llama IA — revisa y registra</div>`
+        : `<div class="bp-fuente bp-fuente-ocr">🔍 Lectura local (la IA no estaba disponible) — revisa con más cuidado</div>`;
     el.innerHTML =
-        `<div style="font-size:13px;color:#495057;margin-bottom:10px;">🧾 <strong>${b.parsed.length}</strong> productos detectados · total ${esc(state.currency)}${total.toLocaleString('es-CL')} — revisa, corrige y registra:</div>
+        `<div class="bp-cabecera">🧾 <strong>${b.parsed.length}</strong> productos detectados · total ${esc(state.currency)}${total.toLocaleString('es-CL')} — revisa, corrige y registra:</div>
          ${fuenteHtml}
          ${chipsResumenHtml()}
          <div id="cuadreBand">${cuadreBoletaHtml(total)}</div>
-         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-            <label style="font-size:13px;color:#6c757d;">Fecha de compra</label>
-            <input type="date" id="boletaFecha" value="${b.parsed[0] ? b.parsed[0].fecha : hoyISO()}" onchange="boletaFechaTodos(this.value)" style="padding:6px 10px;border:2px solid #e9ecef;border-radius:8px;">
+         <div class="bp-fecha-row">
+            <label>Fecha de compra</label>
+            <input type="date" id="boletaFecha" value="${b.parsed[0] ? b.parsed[0].fecha : hoyISO()}" onchange="boletaFechaTodos(this.value)">
          </div>` +
         b.parsed.map((r, i) => {
             const dudoso = r.sospechoso || (r.conf != null && r.conf < CONF_MIN);
@@ -193,7 +193,7 @@ export function renderBoletaPreview() {
             </label>
         </div>`;
         }).join('') +
-        `<p style="font-size:11px;color:#adb5bd;margin:8px 0 60px;">Los productos nuevos se crean con su código de barras (EAN); los existentes quedan ligados a ese EAN para reconocerse solos en la próxima boleta.</p>` +
+        `<p class="bp-nota">Los productos nuevos se crean con su código de barras (EAN); los existentes quedan ligados a ese EAN para reconocerse solos en la próxima boleta.</p>` +
         stickyBarHtml(total);
 }
 
