@@ -595,6 +595,31 @@ input:focus, select:focus, textarea:focus {
 .hist-row .hr-barra span { display: block; height: 100%; background: linear-gradient(90deg, #4fa8d8, var(--c-primary)); border-radius: 4px; }
 .hist-vacio { font-size: var(--fs-xs); color: var(--c-text-muted); padding: 6px 0; }
 
+/* ── Resumen de gastos (sección Compras) ──────────────────── */
+.resumen-gastos {
+    background: var(--c-bg-soft);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-top: 16px;
+}
+.resumen-gastos .rg-head {
+    font-size: var(--fs-sm); color: var(--c-text-secondary);
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.resumen-gastos .rg-fila {
+    display: grid;
+    grid-template-columns: minmax(90px, 1fr) auto minmax(60px, 1.2fr);
+    gap: 10px; align-items: center;
+    font-size: var(--fs-xs); color: var(--c-text-muted);
+    padding: 3px 0;
+}
+.resumen-gastos .rg-nombre { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resumen-gastos .rg-monto { font-weight: 700; color: var(--c-text-secondary); }
+.resumen-gastos .rg-barra { height: 8px; background: var(--c-border); border-radius: 4px; overflow: hidden; }
+.resumen-gastos .rg-barra span { display: block; height: 100%; background: linear-gradient(90deg, #f06595, var(--c-warning)); border-radius: 4px; }
+
 /* Inline edit */
 .insumo-card-edit { display: none; }
 .insumo-card-edit.visible { display: block; }

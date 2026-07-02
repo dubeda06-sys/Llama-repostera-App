@@ -9,6 +9,53 @@ import { renderRecetas } from './recetas.js';
 import { calcularPrecio } from './calculadora.js';
 import { llamaHtml, celebrar } from './ui/llama.js';
 
+// resumen de gastos: mes actual vs anterior + top 5 insumos del mes
+function resumenComprasHtml() {
+    const hoy = new Date();
+    const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+    const prev = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+    const mesAnterior = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+
+    let gastoActual = 0, gastoAnterior = 0;
+    const porInsumo = new Map();
+    for (const c of state.compras) {
+        const mes = (c.fecha || '').slice(0, 7);
+        const monto = parseFloat(c.precio) || 0;
+        if (mes === mesActual) {
+            gastoActual += monto;
+            porInsumo.set(c.insumoId, (porInsumo.get(c.insumoId) || 0) + monto);
+        } else if (mes === mesAnterior) gastoAnterior += monto;
+    }
+    if (!gastoActual && !gastoAnterior) return '';
+
+    const cur = esc(state.currency);
+    let comparacion = '';
+    if (gastoAnterior > 0) {
+        const pct = ((gastoActual - gastoAnterior) / gastoAnterior) * 100;
+        const clase = pct > 1 ? 'ht-sube' : (pct < -1 ? 'ht-baja' : 'ht-igual');
+        const flecha = pct > 1 ? '↑ +' : (pct < -1 ? '↓ ' : '= ');
+        comparacion = `<span class="hist-tend ${clase}">${flecha}${Math.abs(pct).toFixed(0)}% vs mes anterior (${cur}${gastoAnterior.toLocaleString('es-CL')})</span>`;
+    }
+
+    const top = [...porInsumo.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+    const maxTop = top.length ? top[0][1] : 0;
+    const topHtml = top.map(([id, monto]) => {
+        const ins = state.insumos.find(i => i.id === id);
+        return `<div class="rg-fila">
+            <span class="rg-nombre">${ins ? esc(ins.nombre) : '(eliminado)'}</span>
+            <span class="rg-monto">${cur}${monto.toLocaleString('es-CL')}</span>
+            <span class="rg-barra"><span style="width:${maxTop ? (monto / maxTop * 100).toFixed(0) : 0}%"></span></span>
+        </div>`;
+    }).join('');
+
+    return `<div class="resumen-gastos">
+        <div class="rg-head">🧮 Gasto de ${hoy.toLocaleDateString('es-CL', { month: 'long' })}: <strong>${cur}${gastoActual.toLocaleString('es-CL')}</strong> ${comparacion}</div>
+        ${topHtml}
+    </div>`;
+}
+
 export function renderCompras() {
     const el = document.getElementById('listaCompras');
     if (!state.compras.length) {
@@ -19,7 +66,7 @@ export function renderCompras() {
         return;
     }
     const sorted = [...state.compras].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-    el.innerHTML = `<div class="table-wrap"><table><thead><tr>
+    el.innerHTML = resumenComprasHtml() + `<div class="table-wrap"><table><thead><tr>
         <th>Fecha</th><th>Insumo</th><th>Cantidad</th><th>Precio</th><th></th>
     </tr></thead><tbody>
     ${sorted.map(c => {
