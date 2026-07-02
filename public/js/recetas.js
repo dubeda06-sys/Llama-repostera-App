@@ -88,7 +88,7 @@ export function renderRecetas() {
                         </div>
                         <div>
                             <label style="font-size:12px;">Cantidad</label>
-                            <input type="number" id="editIngCantidad" placeholder="200" step="0.01" style="width:90px;">
+                            <input type="number" id="editIngCantidad" placeholder="200" step="0.01" min="0" style="width:90px;" onkeydown="if(event.key==='Enter'){event.preventDefault();editAgregarIngrediente();}">
                         </div>
                         <div>
                             <label style="font-size:12px;">Unidad</label>
@@ -332,7 +332,7 @@ function renderImportPreview() {
             <input type="text" value="${esc(r.nombreRaw || '')}" placeholder="Nombre"
                 oninput="importEdit(${i},'nombreRaw',this.value)" onchange="importRematch(${i})"
                 style="padding:7px; border:2px solid #e9ecef; border-radius:8px;">
-            <input type="number" value="${r.cantidad}" step="0.01" oninput="importEdit(${i},'cantidad',this.value)" style="padding:7px; border:2px solid #e9ecef; border-radius:8px;">
+            <input type="number" value="${r.cantidad}" step="0.01" min="0" oninput="importEdit(${i},'cantidad',this.value)" style="padding:7px; border:2px solid #e9ecef; border-radius:8px;">
             <select onchange="importEdit(${i},'unidad',this.value)" style="padding:7px; border:2px solid #e9ecef; border-radius:8px;">
                 ${['g','kg','ml','l','unidad'].map(u => `<option value="${u}" ${u===r.unidad?'selected':''}>${u}</option>`).join('')}
             </select>

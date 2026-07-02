@@ -57,6 +57,12 @@ export function confirmar(msg) {
     });
 }
 
+// retrasa la ejecución de fn hasta que pasen ms sin nuevas llamadas (búsquedas en vivo)
+export function debounce(fn, ms = 300) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
 export function quitarAcentos(s) { return s.toLowerCase().replace(/[áàäâ]/g,'a').replace(/[éèëê]/g,'e').replace(/[íìïî]/g,'i').replace(/[óòöô]/g,'o').replace(/[úùüû]/g,'u').replace(/ñ/g,'n'); }
 
 export function hoyISO() { return new Date().toISOString().slice(0, 10); }

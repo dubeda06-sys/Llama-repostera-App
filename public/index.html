@@ -27,6 +27,8 @@
         </div>
     </div>
 
+    <div id="offlineBanner" hidden role="status">📡 Sin conexión — los cambios no se guardarán hasta reconectar</div>
+
     <div class="container" id="appRoot" style="display:none;">
         <div class="header">
             <img class="header-banner" src="img/banner.png" alt="Llama Repostera">
@@ -108,7 +110,7 @@
                         <input type="text" class="search-input" id="filtrarInsumo"
                             placeholder="Filtrar mis insumos por nombre o código..."
                             aria-label="Filtrar mis insumos por nombre o código"
-                            oninput="renderInsumos()" autocomplete="off">
+                            oninput="renderInsumosDebounced()" autocomplete="off">
                     </div>
                     <div id="listaInsumos"><div class="spinner"></div></div>
                 </div>
@@ -129,15 +131,15 @@
                     <div class="grid-insumos">
                         <div>
                             <label>Nombre del insumo</label>
-                            <input type="text" id="insumoNombre" placeholder="Ej: Harina, Azúcar..." oninput="autoCodigo()">
+                            <input type="text" id="insumoNombre" placeholder="Ej: Harina, Azúcar..." oninput="autoCodigo()" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarInsumo();}">
                         </div>
                         <div>
                             <label>Código interno</label>
-                            <input type="text" id="insumoCodigo" placeholder="HAR-01" maxlength="12">
+                            <input type="text" id="insumoCodigo" placeholder="HAR-01" maxlength="12" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarInsumo();}">
                         </div>
                         <div>
                             <label>Código de barras (opcional)</label>
-                            <input type="text" id="insumoBarras" placeholder="7501055300007" maxlength="20">
+                            <input type="text" id="insumoBarras" placeholder="7501055300007" maxlength="20" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarInsumo();}">
                         </div>
                         <div style="padding-bottom:1px">
                             <label>&nbsp;</label>
@@ -160,7 +162,8 @@
                                 <div>
                                     <label>Código de barras</label>
                                     <input type="text" id="barrasCodigo" placeholder="Escanea o escribe…" maxlength="20"
-                                        oninput="lookupBarras(this.value)" autocomplete="off">
+                                        oninput="lookupBarras(this.value)" autocomplete="off"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();ligarBarras();}">
                                 </div>
                                 <div>
                                     <label>Producto</label>
@@ -201,7 +204,7 @@
                 <div class="grid-compras">
                     <div>
                         <label>Cantidad</label>
-                        <input type="number" id="compraCantidad" placeholder="1000" step="0.01">
+                        <input type="number" id="compraCantidad" placeholder="1000" step="0.01" min="0" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarCompra();}">
                     </div>
                     <div>
                         <label>Unidad</label>
@@ -215,11 +218,11 @@
                     </div>
                     <div>
                         <label>Precio total</label>
-                        <input type="number" id="compraPrecio" placeholder="2500" step="0.01">
+                        <input type="number" id="compraPrecio" placeholder="2500" step="0.01" min="0" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarCompra();}">
                     </div>
                     <div>
                         <label>Fecha</label>
-                        <input type="date" id="compraFecha">
+                        <input type="date" id="compraFecha" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarCompra();}">
                     </div>
                 </div>
                 <button class="btn btn-success" onclick="agregarCompra(this)">Registrar Compra</button>
@@ -255,11 +258,11 @@
                 <div class="grid-receta-top">
                     <div>
                         <label>Nombre de la receta</label>
-                        <input type="text" id="recetaNombre" placeholder="Ej: Pie de Limón">
+                        <input type="text" id="recetaNombre" placeholder="Ej: Pie de Limón" onkeydown="if(event.key==='Enter'){event.preventDefault();guardarReceta();}">
                     </div>
                     <div>
                         <label>Porciones</label>
-                        <input type="number" id="recetaPorciones" value="1" style="width:100px;">
+                        <input type="number" id="recetaPorciones" value="1" min="1" style="width:100px;" onkeydown="if(event.key==='Enter'){event.preventDefault();guardarReceta();}">
                     </div>
                 </div>
 
@@ -274,7 +277,7 @@
                         </div>
                         <div>
                             <label>Cantidad</label>
-                            <input type="number" id="ingredienteCantidad" placeholder="200" step="0.01" style="width:100px;">
+                            <input type="number" id="ingredienteCantidad" placeholder="200" step="0.01" min="0" style="width:100px;" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarIngrediente();}">
                         </div>
                         <div>
                             <label>Unidad</label>
@@ -351,7 +354,7 @@
                     <h4>💱 Moneda</h4>
                     <div class="form-group">
                         <label>Símbolo de moneda</label>
-                        <input type="text" id="configMoneda" maxlength="4" placeholder="$ € S/ ₡" style="max-width:120px;">
+                        <input type="text" id="configMoneda" maxlength="4" placeholder="$ € S/ ₡" style="max-width:120px;" onkeydown="if(event.key==='Enter'){event.preventDefault();guardarConfig();}">
                     </div>
                 </div>
 
@@ -361,23 +364,23 @@
                     <div class="grid-config-2">
                         <div>
                             <label>Tarifa mano de obra ($ / hora)</label>
-                            <input type="number" id="configTarifaHora" placeholder="0" step="0.01" min="0">
+                            <input type="number" id="configTarifaHora" placeholder="0" step="0.01" min="0" onkeydown="if(event.key==='Enter'){event.preventDefault();guardarConfig();}">
                         </div>
                         <div>
                             <label>Empaque por defecto ($)</label>
-                            <input type="number" id="configEmpaque" placeholder="0" step="0.01" min="0">
+                            <input type="number" id="configEmpaque" placeholder="0" step="0.01" min="0" onkeydown="if(event.key==='Enter'){event.preventDefault();guardarConfig();}">
                         </div>
                         <div>
                             <label>Indirectos por defecto ($)</label>
-                            <input type="number" id="configIndirectos" placeholder="0" step="0.01" min="0">
+                            <input type="number" id="configIndirectos" placeholder="0" step="0.01" min="0" onkeydown="if(event.key==='Enter'){event.preventDefault();guardarConfig();}">
                         </div>
                         <div>
                             <label>Merma por defecto (%)</label>
-                            <input type="number" id="configMerma" placeholder="0" step="0.5" min="0">
+                            <input type="number" id="configMerma" placeholder="0" step="0.5" min="0" onkeydown="if(event.key==='Enter'){event.preventDefault();guardarConfig();}">
                         </div>
                         <div>
                             <label>Margen por defecto (%)</label>
-                            <input type="number" id="configMargen" placeholder="50" step="1" min="0">
+                            <input type="number" id="configMargen" placeholder="50" step="1" min="0" onkeydown="if(event.key==='Enter'){event.preventDefault();guardarConfig();}">
                         </div>
                     </div>
                 </div>

@@ -177,7 +177,7 @@ export function renderBoletaPreview() {
             ${eanCorregidoHtml(r)}
             <div class="bi-grid">
                 <label class="bi-f">Cantidad
-                    <input type="number" value="${r.cantidad}" step="0.001" inputmode="decimal" oninput="boletaEdit(${i},'cantidad',this.value)">
+                    <input type="number" value="${r.cantidad}" step="0.001" min="0" inputmode="decimal" oninput="boletaEdit(${i},'cantidad',this.value)">
                 </label>
                 <label class="bi-f">Unidad
                     <select onchange="boletaEdit(${i},'unidad',this.value)">
@@ -185,7 +185,7 @@ export function renderBoletaPreview() {
                     </select>
                 </label>
                 <label class="bi-f">${dudoso || r.precio <= 0 ? '⚠ ' : ''}Precio total
-                    <input type="number" value="${r.precio}" step="1" inputmode="numeric" title="${pTitle}" style="border-color:${pBorde};" aria-invalid="${r.precio <= 0}" oninput="boletaEdit(${i},'precio',this.value)">
+                    <input type="number" value="${r.precio}" step="1" min="0" inputmode="numeric" title="${pTitle}" style="border-color:${pBorde};" aria-invalid="${r.precio <= 0}" oninput="boletaEdit(${i},'precio',this.value)">
                 </label>
             </div>
             <label class="bi-f bi-insumo">¿Qué insumo es?

@@ -13,7 +13,7 @@ import {
     normalizarInsumo, agregarInsumo, insumosTab, autoCodigo, eliminarInsumo,
     toggleBarras, lookupBarras, ligarBarras, eliminarBarras,
     iniciarEdicion, cancelarEdicion, guardarEdicion,
-    filtrarSugeridos, mostrarSugeridos, seleccionarSugerido, renderInsumos
+    filtrarSugeridos, mostrarSugeridos, seleccionarSugerido, renderInsumos, renderInsumosDebounced
 } from './insumos.js';
 import { agregarCompra, eliminarCompra } from './compras.js';
 import {
@@ -68,6 +68,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const cod = document.getElementById('insumoCodigo');
     if (cod) cod.addEventListener('input', () => { cod.dataset.manual = cod.value ? '1' : ''; });
 
+    // banner de "sin conexión" — los cambios no se guardan hasta volver a estar online
+    const offlineBanner = document.getElementById('offlineBanner');
+    const actualizarOffline = () => { if (offlineBanner) offlineBanner.hidden = navigator.onLine; };
+    window.addEventListener('online', actualizarOffline);
+    window.addEventListener('offline', actualizarOffline);
+    actualizarOffline();
+
     const EMAILS_PERMITIDOS = ['dubeda06@gmail.com', 'claudia.jarap01@gmail.com'];
 
     // completa el login por redirect (cuando corre instalada); onAuthStateChanged hace el resto
@@ -114,7 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
 window.openSection         = openSection;
 window.goBack              = goBack;
 window.agregarInsumo       = agregarInsumo;
-window.renderInsumos       = renderInsumos; // filtro de insumos (oninput) — faltaba en la versión anterior
+window.renderInsumos       = renderInsumos;
+window.renderInsumosDebounced = renderInsumosDebounced; // filtro de insumos (oninput, con debounce de 300ms)
 window.insumosTab          = insumosTab;
 window.autoCodigo          = autoCodigo;
 window.eliminarInsumo      = eliminarInsumo;

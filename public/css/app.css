@@ -1445,3 +1445,12 @@ th { background: var(--c-bg-soft); font-weight: 600; color: var(--c-text-seconda
     color: var(--comp-color, var(--c-text-muted));
     padding: 12px 16px; border-radius: var(--radius-sm); margin-top: 14px; font-size: var(--fs-sm);
 }
+
+/* ── Banner de "sin conexión" ─────────────────────────────── */
+#offlineBanner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10001;
+    background: var(--c-warning); color: #fff; text-align: center;
+    font-size: var(--fs-sm); font-weight: 600;
+    padding: 10px 16px;
+}
+#offlineBanner[hidden] { display: none; }

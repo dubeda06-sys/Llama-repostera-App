@@ -1,7 +1,7 @@
 // Insumos: CRUD, emojis, tarjetas, códigos de barra y sugeridos.
 import { db, collection, addDoc, deleteDoc, updateDoc, doc } from './firebase.js';
 import { state } from './state.js';
-import { esc, toast, confirmar, quitarAcentos, btnLoading, marcarError, numValido } from './util.js';
+import { esc, toast, confirmar, quitarAcentos, btnLoading, marcarError, numValido, debounce } from './util.js';
 import { actualizarSelects, actualizarContadores } from './render.js';
 import { renderRecetas } from './recetas.js';
 import { calcularPrecio } from './calculadora.js';
@@ -148,6 +148,8 @@ function insumoCardHtml(ins) {
             </div>
         </div>`;
 }
+
+export const renderInsumosDebounced = debounce(() => renderInsumos(), 300);
 
 export function renderInsumos() {
     const el = document.getElementById('listaInsumos');
