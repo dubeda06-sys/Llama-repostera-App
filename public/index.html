@@ -112,7 +112,7 @@
                             aria-label="Filtrar mis insumos por nombre o código"
                             oninput="renderInsumosDebounced()" autocomplete="off">
                     </div>
-                    <div id="listaInsumos"><div class="spinner"></div></div>
+                    <div id="listaInsumos"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>
                 </div>
 
                 <!-- INGRESAR: alta + códigos de barra -->
@@ -233,7 +233,7 @@
                 </div>
                 <button class="btn btn-success" onclick="agregarCompra(this)">Registrar Compra</button>
 
-                <div id="listaCompras"><div class="spinner"></div></div>
+                <div id="listaCompras"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>
             </div>
 
             <!-- RECETAS -->
@@ -298,7 +298,7 @@
 
                 <button class="btn btn-success" onclick="guardarReceta(this)">Guardar Receta</button>
 
-                <div id="listaRecetas" style="margin-top:24px;"><div class="spinner"></div></div>
+                <div id="listaRecetas" style="margin-top:24px;"><div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div></div>
             </div>
 
             <!-- CALCULADORA -->

@@ -66,10 +66,12 @@ export function renderCompras() {
         return;
     }
     const sorted = [...state.compras].sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    const visibles = sorted.slice(0, comprasVisibles);
+    const restantes = sorted.length - visibles.length;
     el.innerHTML = resumenComprasHtml() + `<div class="table-wrap"><table><thead><tr>
         <th>Fecha</th><th>Insumo</th><th>Cantidad</th><th>Precio</th><th></th>
     </tr></thead><tbody>
-    ${sorted.map(c => {
+    ${visibles.map(c => {
         const ins = state.insumos.find(i => i.id === c.insumoId);
         return `<tr>
             <td>${new Date(c.fecha + 'T00:00').toLocaleDateString()}</td>
@@ -79,7 +81,15 @@ export function renderCompras() {
             <td><button class="btn btn-danger btn-sm" onclick="eliminarCompra('${c.id}')">🗑️</button></td>
         </tr>`;
     }).join('')}
-    </tbody></table></div>`;
+    </tbody></table></div>` +
+    (restantes > 0 ? `<button class="btn btn-edit btn-ver-mas" onclick="comprasVerMas()">Ver más (${restantes} restantes)</button>` : '');
+}
+
+// paginación: la tabla arranca en 20 filas y crece de a 20 con "Ver más"
+let comprasVisibles = 20;
+export function comprasVerMas() {
+    comprasVisibles += 20;
+    renderCompras();
 }
 
 // núcleo reutilizable: registra una compra y reescribe el precio/unidadBase del insumo

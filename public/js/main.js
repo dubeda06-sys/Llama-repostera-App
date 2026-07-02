@@ -16,7 +16,7 @@ import {
     filtrarSugeridos, mostrarSugeridos, seleccionarSugerido, renderInsumos, renderInsumosDebounced,
     toggleHistorial
 } from './insumos.js';
-import { agregarCompra, eliminarCompra } from './compras.js';
+import { agregarCompra, eliminarCompra, comprasVerMas } from './compras.js';
 import {
     agregarIngrediente, actualizarUnidadIngrediente, eliminarIngredienteTemp,
     guardarReceta, eliminarReceta, iniciarEdicionReceta, cancelarEdicionReceta,
@@ -156,6 +156,7 @@ window.boletaResaltar      = boletaResaltar;
 window.aplicarBoleta       = aplicarBoleta;
 window.agregarCompra       = agregarCompra;
 window.eliminarCompra      = eliminarCompra;
+window.comprasVerMas       = comprasVerMas;
 window.agregarIngrediente  = agregarIngrediente;
 window.actualizarUnidadIngrediente = actualizarUnidadIngrediente;
 window.eliminarIngredienteTemp = eliminarIngredienteTemp;

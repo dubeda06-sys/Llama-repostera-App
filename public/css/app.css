@@ -1123,6 +1123,26 @@ th { background: var(--c-bg-soft); font-weight: 600; color: var(--c-text-seconda
 .modal-btn-confirm { background: linear-gradient(135deg, var(--c-danger), #c82333); color: white; }
 .modal-btn-confirm:hover { box-shadow: 0 4px 14px rgba(220,53,69,.45); }
 
+/* ── Skeletons de carga (shimmer mientras llega Firestore) ── */
+.skeleton-card {
+    height: 76px;
+    border-radius: 14px;
+    margin-bottom: 12px;
+    background: linear-gradient(90deg, var(--c-bg-soft) 25%, var(--c-border) 50%, var(--c-bg-soft) 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeletonShimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-card { animation: none; background: var(--c-bg-soft); }
+}
+
+/* botón "Ver más" de la tabla de compras */
+.btn-ver-mas { display: block; margin: 12px auto 0; }
+
 /* ── Spinner ─────────────────────────────────────────────── */
 .spinner { display: flex; align-items: center; justify-content: center; padding: 36px; }
 .spinner::after {

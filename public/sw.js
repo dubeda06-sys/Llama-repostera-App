@@ -4,7 +4,8 @@
 //    sólo usa caché como respaldo offline). Esto evita servir un app.js sin App Check.
 //  - Imágenes/íconos/fuentes → cache-first (rápido y disponible offline).
 //  - Cross-origin (Firestore, gstatic, reCAPTCHA, Tesseract CDN) → NO se intercepta.
-const CACHE_NAME = 'reposteria-v3';
+// OJO: subir la versión al cambiar los assets precacheados (activate limpia los caches viejos)
+const CACHE_NAME = 'reposteria-v4';
 const PRECACHE = ['/', '/index.html', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon.svg'];
 
 self.addEventListener('install', event => {
