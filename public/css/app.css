@@ -1026,6 +1026,19 @@ th { background: var(--c-bg-soft); font-weight: 600; color: var(--c-text-seconda
 .toast-ok    { background: linear-gradient(135deg, #28a745, #20c959); }
 .toast-error { background: linear-gradient(135deg, var(--c-danger), #c82333); }
 .toast-info  { background: linear-gradient(135deg, #667eea, #764ba2); }
+.toast-deshacer {
+    background: linear-gradient(135deg, var(--c-text), #495a66);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    text-align: left;
+}
+.toast-deshacer button {
+    flex-shrink: 0; width: auto;
+    background: rgba(255,255,255,.16); color: #fff;
+    border: 1px solid rgba(255,255,255,.45); border-radius: var(--radius-sm);
+    padding: 8px 14px; font-size: var(--fs-sm); font-weight: 700;
+    cursor: pointer; min-height: 40px;
+}
+.toast-deshacer button:hover { background: rgba(255,255,255,.28); }
 .toast-out   { animation: toastOut .3s ease forwards; }
 @keyframes toastIn  { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
 @keyframes toastOut { from { opacity:1; transform:translateY(0) } to { opacity:0; transform:translateY(12px) } }

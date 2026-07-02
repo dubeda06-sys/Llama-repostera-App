@@ -22,6 +22,28 @@ export function toast(msg, tipo = 'ok') {
     }, 3200);
 }
 
+// toast con botón "Deshacer": borrado optimista con 5s de gracia.
+// onConfirmar corre al expirar (el delete real); onDeshacer si el usuario se arrepiente.
+export function toastDeshacer(msg, { onDeshacer, onConfirmar }, ms = 5000) {
+    const host = document.getElementById('toastHost');
+    const el = document.createElement('div');
+    el.className = 'toast toast-deshacer';
+    el.innerHTML = `<span></span><button type="button">↩ Deshacer</button>`;
+    el.querySelector('span').textContent = msg;
+    host.appendChild(el);
+
+    const cerrar = () => {
+        el.classList.add('toast-out');
+        setTimeout(() => el.remove(), 320);
+    };
+    const timer = setTimeout(() => { cerrar(); onConfirmar(); }, ms);
+    el.querySelector('button').onclick = () => {
+        clearTimeout(timer);
+        cerrar();
+        onDeshacer();
+    };
+}
+
 // modal de confirmación (async) — con focus trap y restauración de foco al cerrar
 export function confirmar(msg) {
     return new Promise(resolve => {

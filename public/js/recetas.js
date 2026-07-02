@@ -1,7 +1,7 @@
 // Recetas: CRUD, edición inline, ingredientes temporales e importador desde texto.
 import { db, collection, addDoc, deleteDoc, updateDoc, doc } from './firebase.js';
 import { state } from './state.js';
-import { esc, toast, confirmar, quitarAcentos, btnLoading, marcarError, numValido } from './util.js';
+import { esc, toast, toastDeshacer, quitarAcentos, btnLoading, marcarError, numValido } from './util.js';
 import { unidadesCompatibles, UNIDAD_MAP } from './units.js';
 import { matchInsumo } from './match.js';
 import { sugerirCodigo, renderInsumos } from './insumos.js';
@@ -198,13 +198,27 @@ export async function guardarReceta(btn) {
     celebrar(`¡Receta "${nombre}" guardada! 🎂`);
 }
 
-export async function eliminarReceta(id) {
-    if (!(await confirmar('¿Eliminar esta receta?'))) return;
-    await deleteDoc(doc(db, 'recetas', id));
-    state.recetas = state.recetas.filter(r => r.id !== id);
+// borrado optimista con 5s para deshacer; el deleteDoc real corre al expirar el toast
+export function eliminarReceta(id) {
+    const idx = state.recetas.findIndex(r => r.id === id);
+    if (idx === -1) return;
+    const receta = state.recetas[idx];
+    state.recetas.splice(idx, 1);
     renderRecetas();
     actualizarContadores();
     actualizarCalcSelect();
+    toastDeshacer(`Receta "${receta.nombre}" eliminada`, {
+        onDeshacer: () => {
+            state.recetas.splice(idx, 0, receta);
+            renderRecetas();
+            actualizarContadores();
+            actualizarCalcSelect();
+        },
+        onConfirmar: async () => {
+            try { await deleteDoc(doc(db, 'recetas', id)); }
+            catch (e) { console.error(e); toast('No se pudo eliminar la receta — reaparecerá al recargar', 'error'); }
+        }
+    });
 }
 
 // ── Edición inline de recetas ─────────────────────────────────

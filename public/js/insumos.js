@@ -1,7 +1,7 @@
 // Insumos: CRUD, emojis, tarjetas, códigos de barra y sugeridos.
 import { db, collection, addDoc, deleteDoc, updateDoc, doc } from './firebase.js';
 import { state } from './state.js';
-import { esc, toast, confirmar, quitarAcentos, btnLoading, marcarError, numValido, debounce } from './util.js';
+import { esc, toast, toastDeshacer, confirmar, quitarAcentos, btnLoading, marcarError, numValido, debounce } from './util.js';
 import { actualizarSelects, actualizarContadores } from './render.js';
 import { renderRecetas } from './recetas.js';
 import { calcularPrecio } from './calculadora.js';
@@ -231,19 +231,28 @@ export async function agregarInsumo(btn) {
 }
 
 export async function eliminarInsumo(id) {
-    // avisar qué recetas quedan cojas antes de borrar (hoy quedaban huérfanas en silencio)
+    const idx = state.insumos.findIndex(i => i.id === id);
+    if (idx === -1) return;
+    const ins = state.insumos[idx];
+    // si se usa en recetas, pedir confirmación explícita (quedarán sin costo)
     const usadas = state.recetas
         .filter(r => (r.ingredientes || []).some(ing => ing.insumoId === id))
         .map(r => r.nombre);
-    const extra = usadas.length
-        ? ` OJO: se usa en ${usadas.length === 1 ? 'la receta' : 'las recetas'} "${usadas.join('", "')}" — quedará(n) sin costo.`
-        : '';
-    if (!(await confirmar('¿Eliminar este insumo? Esta acción no se puede deshacer.' + extra))) return;
-    await deleteDoc(doc(db, 'insumos', id));
-    state.insumos = state.insumos.filter(i => i.id !== id);
-    renderInsumos();
-    actualizarSelects();
-    actualizarContadores();
+    if (usadas.length) {
+        const extra = ` OJO: se usa en ${usadas.length === 1 ? 'la receta' : 'las recetas'} "${usadas.join('", "')}" — quedará(n) sin costo.`;
+        if (!(await confirmar('¿Eliminar este insumo?' + extra))) return;
+    }
+
+    const refrescar = () => { renderInsumos(); renderBarras(); actualizarSelects(); actualizarContadores(); };
+    state.insumos.splice(idx, 1);
+    refrescar();
+    toastDeshacer(`"${ins.nombre}" eliminado`, {
+        onDeshacer: () => { state.insumos.splice(idx, 0, ins); refrescar(); },
+        onConfirmar: async () => {
+            try { await deleteDoc(doc(db, 'insumos', id)); }
+            catch (e) { console.error(e); toast('No se pudo eliminar el insumo — reaparecerá al recargar', 'error'); }
+        }
+    });
 }
 
 export function iniciarEdicion(id) {

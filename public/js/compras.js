@@ -1,7 +1,7 @@
 // Compras: tabla, registro manual y núcleo compartido con el lector de boletas.
 import { db, collection, addDoc, deleteDoc, updateDoc, doc } from './firebase.js';
 import { state } from './state.js';
-import { esc, toast, confirmar, btnLoading, marcarError, numValido } from './util.js';
+import { esc, toast, toastDeshacer, btnLoading, marcarError, numValido } from './util.js';
 import { FACTORS } from './units.js';
 import { actualizarContadores } from './render.js';
 import { renderInsumos } from './insumos.js';
@@ -85,11 +85,25 @@ export async function agregarCompra(btn) {
     toast('Compra registrada 🛒');
 }
 
-export async function eliminarCompra(id) {
-    if (!(await confirmar('¿Eliminar esta compra?'))) return;
-    await deleteDoc(doc(db, 'compras', id));
-    state.compras = state.compras.filter(c => c.id !== id);
+// borrado optimista con 5s para deshacer; el deleteDoc real corre al expirar el toast
+export function eliminarCompra(id) {
+    const idx = state.compras.findIndex(c => c.id === id);
+    if (idx === -1) return;
+    const compra = state.compras[idx];
+    state.compras.splice(idx, 1);
     renderCompras();
     renderInsumos();
     actualizarContadores();
+    toastDeshacer('Compra eliminada', {
+        onDeshacer: () => {
+            state.compras.splice(idx, 0, compra);
+            renderCompras();
+            renderInsumos();
+            actualizarContadores();
+        },
+        onConfirmar: async () => {
+            try { await deleteDoc(doc(db, 'compras', id)); }
+            catch (e) { console.error(e); toast('No se pudo eliminar la compra — reaparecerá al recargar', 'error'); }
+        }
+    });
 }
