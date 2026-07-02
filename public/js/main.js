@@ -25,6 +25,7 @@ import {
 import { calcularPrecio, abrirRecetaEnCalc, guardarCostosReceta } from './calculadora.js';
 import { guardarConfig, cargarConfigEnUI } from './config.js';
 import { exportarRespaldoJSON, exportarComprasCSV } from './exportar.js';
+import { escanearBarras, scannerSoportado } from './scanner.js';
 import { procesarBoleta, rotarBoleta } from './boleta/index.js';
 import { boletaEdit, boletaRematch, boletaQuitar, boletaFechaTodos, aplicarBoleta, boletaSel, boletaQuitarSel, boletaResaltar } from './boleta/preview.js';
 
@@ -68,6 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const cod = document.getElementById('insumoCodigo');
     if (cod) cod.addEventListener('input', () => { cod.dataset.manual = cod.value ? '1' : ''; });
+
+    // botones 📷 del escáner: visibles solo si el navegador tiene BarcodeDetector
+    if (scannerSoportado) {
+        document.querySelectorAll('.scan-btn-oculto').forEach(b => b.classList.remove('scan-btn-oculto'));
+    }
 
     // banner de "sin conexión" — los cambios no se guardan hasta volver a estar online
     const offlineBanner = document.getElementById('offlineBanner');
@@ -173,5 +179,6 @@ window.guardarCostosReceta = guardarCostosReceta;
 window.guardarConfig       = guardarConfig;
 window.exportarRespaldoJSON = exportarRespaldoJSON;
 window.exportarComprasCSV   = exportarComprasCSV;
+window.escanearBarras       = escanearBarras;
 window.signInGoogle        = signInGoogle;
 window.logout              = logout;

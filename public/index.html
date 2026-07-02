@@ -139,7 +139,10 @@
                         </div>
                         <div>
                             <label>Código de barras (opcional)</label>
-                            <input type="text" id="insumoBarras" placeholder="7501055300007" maxlength="20" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarInsumo();}">
+                            <div class="input-con-scan">
+                                <input type="text" id="insumoBarras" placeholder="7501055300007" maxlength="20" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarInsumo();}">
+                                <button type="button" class="btn-scan scan-btn-oculto" onclick="escanearBarras('insumoBarras')" title="Escanear con la cámara" aria-label="Escanear código de barras con la cámara">📷</button>
+                            </div>
                         </div>
                         <div style="padding-bottom:1px">
                             <label>&nbsp;</label>
@@ -161,9 +164,12 @@
                             <div class="grid-barras-mod">
                                 <div>
                                     <label>Código de barras</label>
-                                    <input type="text" id="barrasCodigo" placeholder="Escanea o escribe…" maxlength="20"
-                                        oninput="lookupBarras(this.value)" autocomplete="off"
-                                        onkeydown="if(event.key==='Enter'){event.preventDefault();ligarBarras();}">
+                                    <div class="input-con-scan">
+                                        <input type="text" id="barrasCodigo" placeholder="Escanea o escribe…" maxlength="20"
+                                            oninput="lookupBarras(this.value)" autocomplete="off"
+                                            onkeydown="if(event.key==='Enter'){event.preventDefault();ligarBarras();}">
+                                        <button type="button" class="btn-scan scan-btn-oculto" onclick="escanearBarras('barrasCodigo')" title="Escanear con la cámara" aria-label="Escanear código de barras con la cámara">📷</button>
+                                    </div>
                                 </div>
                                 <div>
                                     <label>Producto</label>

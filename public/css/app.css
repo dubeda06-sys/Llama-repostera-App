@@ -1518,6 +1518,47 @@ th { background: var(--c-bg-soft); font-weight: 600; color: var(--c-text-seconda
     padding: 12px 16px; border-radius: var(--radius-sm); margin-top: 14px; font-size: var(--fs-sm);
 }
 
+/* ── Escáner de códigos de barra (overlay de cámara) ──────── */
+.scanner-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.75);
+    padding: 20px;
+}
+.scanner-overlay[hidden] { display: none; }
+.so-card {
+    position: relative;
+    width: min(420px, 94vw);
+    text-align: center;
+}
+.so-card video {
+    width: 100%; border-radius: var(--radius);
+    background: #000;
+    aspect-ratio: 3 / 4; object-fit: cover;
+}
+.so-marco {
+    position: absolute; top: 32%; left: 10%; right: 10%; height: 22%;
+    border: 3px solid var(--c-primary); border-radius: var(--radius-sm);
+    box-shadow: 0 0 0 2000px rgba(0,0,0,.18);
+    pointer-events: none;
+}
+.so-texto { color: #fff; font-size: var(--fs-sm); font-weight: 600; margin: 12px 0; }
+.so-card .btn { min-width: 140px; }
+
+/* botón 📷 pegado a un input (escáner) */
+.btn-scan {
+    flex-shrink: 0;
+    width: 46px; min-height: 44px;
+    border: 2px solid var(--c-border); border-radius: var(--radius-sm);
+    background: var(--c-bg-soft);
+    font-size: var(--fs-lg);
+    cursor: pointer;
+}
+.btn-scan:hover { background: var(--c-border); }
+.scan-btn-oculto { display: none; } /* se muestra desde main.js solo si hay BarcodeDetector */
+.input-con-scan { display: flex; gap: 8px; align-items: stretch; }
+.input-con-scan input { flex: 1; min-width: 0; }
+
 /* ── Banner de "sin conexión" ─────────────────────────────── */
 #offlineBanner {
     position: fixed; top: 0; left: 0; right: 0; z-index: 10001;
