@@ -24,6 +24,7 @@ import {
 } from './recetas.js';
 import { calcularPrecio, abrirRecetaEnCalc, guardarCostosReceta } from './calculadora.js';
 import { guardarConfig, cargarConfigEnUI } from './config.js';
+import { exportarRespaldoJSON, exportarComprasCSV } from './exportar.js';
 import { procesarBoleta, rotarBoleta } from './boleta/index.js';
 import { boletaEdit, boletaRematch, boletaQuitar, boletaFechaTodos, aplicarBoleta, boletaSel, boletaQuitarSel, boletaResaltar } from './boleta/preview.js';
 
@@ -170,5 +171,7 @@ window.calcularPrecio      = calcularPrecio;
 window.abrirRecetaEnCalc   = abrirRecetaEnCalc;
 window.guardarCostosReceta = guardarCostosReceta;
 window.guardarConfig       = guardarConfig;
+window.exportarRespaldoJSON = exportarRespaldoJSON;
+window.exportarComprasCSV   = exportarComprasCSV;
 window.signInGoogle        = signInGoogle;
 window.logout              = logout;

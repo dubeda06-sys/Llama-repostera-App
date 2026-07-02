@@ -385,6 +385,17 @@
                     </div>
                 </div>
 
+                <div class="config-group">
+                    <h4>💾 Respaldo</h4>
+                    <p style="font-size:13px; color:#6c757d; margin-bottom:14px;">
+                        Descarga una copia de todos tus datos. Guárdala de vez en cuando: si algo se borra por error, es tu red de seguridad.
+                    </p>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn btn-primary" onclick="exportarRespaldoJSON()">⬇ Descargar respaldo completo</button>
+                        <button class="btn btn-edit" onclick="exportarComprasCSV()">📊 Compras a Excel (CSV)</button>
+                    </div>
+                </div>
+
                 <button class="btn btn-primary" onclick="guardarConfig()">Guardar configuración</button>
                 <p id="configMsg" style="color:#28a745; margin-top:10px; display:none; font-size:14px;">✓ Guardado</p>
             </div>
