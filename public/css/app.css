@@ -557,15 +557,43 @@ input:focus, select:focus, textarea:focus {
 .insumo-details h3 { color: var(--c-text); font-size: 15px; margin-bottom: 3px; line-height: 1.3; }
 .insumo-details p { color: var(--c-text-muted); font-size: var(--fs-sm); }
 
-/* botones grandes: Editar ancho + Eliminar cuadrado */
-.insumo-actions { display: grid; grid-template-columns: 1fr 48px; gap: 8px; }
+/* botones grandes: Editar ancho + Historial/Eliminar cuadrados */
+.insumo-actions { display: flex; gap: 8px; }
 .insumo-actions .btn {
     min-height: 44px;
     padding: 10px 12px;
     font-size: 15px;
     display: flex; align-items: center; justify-content: center;
 }
-.insumo-actions .btn-danger { padding: 10px; font-size: 18px; }
+.insumo-actions .btn-edit { flex: 1; }
+.insumo-actions .btn-danger, .insumo-actions .btn-hist { width: 48px; flex-shrink: 0; padding: 10px; font-size: 18px; }
+.insumo-actions .btn-hist { background: #eaf6fc; }
+.insumo-actions .btn-hist:hover { background: #d4ecf8; }
+
+/* panel de historial de precios (expandible bajo la card) */
+.insumo-hist { display: none; }
+.insumo-hist.visible {
+    display: block;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--c-border);
+}
+.hist-head { font-size: var(--fs-sm); font-weight: 700; color: var(--c-text-secondary); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hist-tend { font-size: var(--fs-xs); font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.ht-sube  { color: #a26312; background: #fff9db; }
+.ht-baja  { color: #2b8a3e; background: #ebfbee; }
+.ht-igual { color: var(--c-text-muted); background: var(--c-bg-soft); }
+.hist-row {
+    display: grid;
+    grid-template-columns: auto auto auto auto 1fr;
+    gap: 8px; align-items: center;
+    font-size: var(--fs-xs); color: var(--c-text-muted);
+    padding: 3px 0;
+}
+.hist-row .hr-precio, .hist-row .hr-base { font-weight: 600; color: var(--c-text-secondary); }
+.hist-row .hr-barra { height: 8px; background: var(--c-bg-soft); border-radius: 4px; overflow: hidden; min-width: 40px; }
+.hist-row .hr-barra span { display: block; height: 100%; background: linear-gradient(90deg, #4fa8d8, var(--c-primary)); border-radius: 4px; }
+.hist-vacio { font-size: var(--fs-xs); color: var(--c-text-muted); padding: 6px 0; }
 
 /* Inline edit */
 .insumo-card-edit { display: none; }

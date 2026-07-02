@@ -13,7 +13,8 @@ import {
     normalizarInsumo, agregarInsumo, insumosTab, autoCodigo, eliminarInsumo,
     toggleBarras, lookupBarras, ligarBarras, eliminarBarras,
     iniciarEdicion, cancelarEdicion, guardarEdicion,
-    filtrarSugeridos, mostrarSugeridos, seleccionarSugerido, renderInsumos, renderInsumosDebounced
+    filtrarSugeridos, mostrarSugeridos, seleccionarSugerido, renderInsumos, renderInsumosDebounced,
+    toggleHistorial
 } from './insumos.js';
 import { agregarCompra, eliminarCompra } from './compras.js';
 import {
@@ -180,5 +181,6 @@ window.guardarConfig       = guardarConfig;
 window.exportarRespaldoJSON = exportarRespaldoJSON;
 window.exportarComprasCSV   = exportarComprasCSV;
 window.escanearBarras       = escanearBarras;
+window.toggleHistorial      = toggleHistorial;
 window.signInGoogle        = signInGoogle;
 window.logout              = logout;

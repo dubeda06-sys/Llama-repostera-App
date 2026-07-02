@@ -2,6 +2,7 @@
 import { db, collection, addDoc, deleteDoc, updateDoc, doc } from './firebase.js';
 import { state } from './state.js';
 import { esc, toast, toastDeshacer, confirmar, quitarAcentos, btnLoading, marcarError, numValido, debounce } from './util.js';
+import { FACTORS } from './units.js';
 import { actualizarSelects, actualizarContadores } from './render.js';
 import { renderRecetas } from './recetas.js';
 import { calcularPrecio } from './calculadora.js';
@@ -110,6 +111,58 @@ export function insumosTab(which) {
 
 export function tienePrecioInsumo(ins) { return ins.precio != null && ins.unidadBase; }
 
+// ── Historial de precios ──────────────────────────────────────
+// precio por unidad base de una compra (misma fórmula que registrarCompraCore)
+function precioBaseCompra(c, unidadBase) {
+    if (!unidadBase || !c.cantidad || !FACTORS[c.unidad]) return null;
+    return (c.precio / (c.cantidad * FACTORS[c.unidad])) * FACTORS[unidadBase];
+}
+
+function historialHtml(ins) {
+    const compras = state.compras
+        .filter(c => c.insumoId === ins.id)
+        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+    if (!compras.length) return '<p class="hist-vacio">Sin compras registradas todavía.</p>';
+
+    const filas = compras.map(c => ({ c, pb: precioBaseCompra(c, ins.unidadBase) }));
+    const maxPb = Math.max(...filas.map(f => f.pb || 0));
+
+    // tendencia: primera vs última compra con precio base calculable
+    const conPb = filas.filter(f => f.pb != null);
+    let tendencia = '';
+    if (conPb.length >= 2) {
+        const primero = conPb[0].pb, ultimo = conPb[conPb.length - 1].pb;
+        const pct = ((ultimo - primero) / primero) * 100;
+        const desde = new Date(conPb[0].c.fecha + 'T00:00').toLocaleDateString('es-CL', { month: 'short', year: 'numeric' });
+        if (Math.abs(pct) < 1) tendencia = `<span class="hist-tend ht-igual">= estable desde ${desde}</span>`;
+        else if (pct > 0)      tendencia = `<span class="hist-tend ht-sube">↑ +${pct.toFixed(0)}% desde ${desde}</span>`;
+        else                   tendencia = `<span class="hist-tend ht-baja">↓ ${pct.toFixed(0)}% desde ${desde}</span>`;
+    }
+
+    const cur = esc(state.currency);
+    return `
+        <div class="hist-head">📈 Historial de precios ${tendencia}</div>
+        ${filas.map(({ c, pb }) => `
+        <div class="hist-row">
+            <span class="hr-fecha">${new Date(c.fecha + 'T00:00').toLocaleDateString()}</span>
+            <span class="hr-cant">${c.cantidad} ${esc(c.unidad || '')}</span>
+            <span class="hr-precio">${cur}${parseFloat(c.precio).toFixed(2)}</span>
+            <span class="hr-base">${pb != null ? `${cur}${pb.toFixed(2)}/${esc(ins.unidadBase)}` : '—'}</span>
+            <span class="hr-barra"><span style="width:${pb && maxPb ? (pb / maxPb * 100).toFixed(0) : 0}%"></span></span>
+        </div>`).join('')}`;
+}
+
+export function toggleHistorial(id) {
+    const panel = document.getElementById(`hist-${id}`);
+    if (!panel) return;
+    if (panel.classList.toggle('visible')) {
+        const ins = state.insumos.find(i => i.id === id);
+        panel.innerHTML = ins ? historialHtml(ins) : '';
+    } else {
+        panel.innerHTML = '';
+    }
+}
+
 // tarjeta de un insumo (vista + edición)
 function insumoCardHtml(ins) {
     const tieneprecio = tienePrecioInsumo(ins);
@@ -133,9 +186,12 @@ function insumoCardHtml(ins) {
                 </div>
                 <div class="insumo-actions">
                     <button class="btn btn-edit" onclick="iniciarEdicion('${ins.id}')">✏️ Editar</button>
+                    ${state.compras.some(c => c.insumoId === ins.id)
+                        ? `<button class="btn btn-hist" onclick="toggleHistorial('${ins.id}')" title="Historial de precios" aria-label="Historial de precios">📈</button>` : ''}
                     <button class="btn btn-danger" onclick="eliminarInsumo('${ins.id}')" title="Eliminar">🗑️</button>
                 </div>
             </div>
+            <div class="insumo-hist" id="hist-${ins.id}"></div>
             <div class="insumo-card-edit" id="edit-${ins.id}">
                 <div class="edit-row">
                     <input type="text" id="eCodigo-${ins.id}" value="${esc(ins.codigo || '')}" placeholder="Código" maxlength="12">
