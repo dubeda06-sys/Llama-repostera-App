@@ -80,7 +80,7 @@ async function leerBoletaOCR() {
     const data = await ocrCanvas(canvas, p => mostrarCargaBoleta('Leyendo los productos…', p));
     document.getElementById('boletaRotar').style.display = 'inline-block';
     // depuración: activar con localStorage.debugOCR = '1'
-    if (localStorage.getItem('debugOCR')) { window.__ocrText = data.text; window.__ocrBlocks = data.blocks; }
+    if (localStorage.getItem('debugOCR')) console.log('OCR debug:', data.text, data.blocks);
     // parse espacial por columnas (bbox); si no hay cajas, fallback al parse de texto plano
     const filas = filasDesdeBlocks(data.blocks);
     b.parsed = filas.length ? parseBoletaWords(filas) : parseBoleta(data.text);

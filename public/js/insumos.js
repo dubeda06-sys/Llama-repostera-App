@@ -1,7 +1,7 @@
 // Insumos: CRUD, emojis, tarjetas, códigos de barra y sugeridos.
 import { db, collection, addDoc, deleteDoc, updateDoc, doc } from './firebase.js';
 import { state } from './state.js';
-import { esc, toast, confirmar, quitarAcentos, btnLoading, marcarError } from './util.js';
+import { esc, toast, confirmar, quitarAcentos, btnLoading, marcarError, numValido } from './util.js';
 import { actualizarSelects, actualizarContadores } from './render.js';
 import { renderRecetas } from './recetas.js';
 import { calcularPrecio } from './calculadora.js';
@@ -193,6 +193,7 @@ export async function agregarInsumo(btn) {
     const codigoBarras = document.getElementById('insumoBarras').value.trim();
     let codigo = document.getElementById('insumoCodigo').value.trim().toUpperCase();
     if (!nombre) { marcarError(nombreEl); return toast('Ingresa el nombre del insumo', 'error'); }
+    if (nombre.length > 200) { marcarError(nombreEl); return toast('Nombre demasiado largo', 'error'); }
     if (!codigo) codigo = sugerirCodigo(nombre);
     if (codigoBarras && barrasDuplicado(codigoBarras)) { marcarError(document.getElementById('insumoBarras')); return toast('Ese código de barras ya está ligado a otro producto', 'error'); }
     const datos = { codigo, nombre, codigosBarras: codigoBarras ? [codigoBarras] : [], precio: null, unidadBase: null, fechaCreacion: new Date().toISOString() };
@@ -257,9 +258,10 @@ export async function guardarEdicion(id) {
     const codigo = document.getElementById(`eCodigo-${id}`).value.trim().toUpperCase();
     const nombre = document.getElementById(`eNombre-${id}`).value.trim();
     const precioRaw = document.getElementById(`ePrecio-${id}`).value.trim();
-    if (!nombre) return;
+    if (!nombre || nombre.length > 200) return;
     const ins = state.insumos.find(i => i.id === id);
     const precio = precioRaw === '' ? null : parseFloat(precioRaw);
+    if (precio !== null && !numValido(precio, { min: 0 })) return toast('Precio inválido', 'error');
     const datos = {
         codigo: codigo || sugerirCodigo(nombre),
         nombre,

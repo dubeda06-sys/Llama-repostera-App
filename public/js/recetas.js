@@ -1,7 +1,7 @@
 // Recetas: CRUD, edición inline, ingredientes temporales e importador desde texto.
 import { db, collection, addDoc, deleteDoc, updateDoc, doc } from './firebase.js';
 import { state } from './state.js';
-import { esc, toast, confirmar, quitarAcentos, btnLoading, marcarError } from './util.js';
+import { esc, toast, confirmar, quitarAcentos, btnLoading, marcarError, numValido } from './util.js';
 import { unidadesCompatibles, UNIDAD_MAP } from './units.js';
 import { matchInsumo } from './match.js';
 import { sugerirCodigo, renderInsumos } from './insumos.js';
@@ -141,7 +141,7 @@ export function agregarIngrediente() {
     const cantidad = parseFloat(document.getElementById('ingredienteCantidad').value);
     const unidad   = document.getElementById('ingredienteUnidad').value;
     if (!insumoId) { marcarError(document.getElementById('ingredienteInsumo')); return toast('Selecciona el insumo', 'error'); }
-    if (!cantidad) { marcarError(document.getElementById('ingredienteCantidad')); return toast('Ingresa la cantidad', 'error'); }
+    if (!numValido(cantidad, { min: 0.001 })) { marcarError(document.getElementById('ingredienteCantidad')); return toast('Ingresa una cantidad válida', 'error'); }
     if (state.ingredientesTemp.find(i => i.insumoId === insumoId)) return toast('Ingrediente ya agregado', 'error');
     const ins = state.insumos.find(i => i.id === insumoId);
     state.ingredientesTemp.push({ insumoId, codigo: ins.codigo || '', nombre: ins.nombre, unidad: unidad || ins.unidad, cantidad });
@@ -169,7 +169,8 @@ export async function guardarReceta(btn) {
     const nombreEl  = document.getElementById('recetaNombre');
     const nombre    = nombreEl.value.trim();
     const porciones = parseInt(document.getElementById('recetaPorciones').value);
-    if (!nombre) { marcarError(nombreEl); return toast('Ingresa el nombre de la receta', 'error'); }
+    if (!nombre || nombre.length > 200) { marcarError(nombreEl); return toast('Ingresa un nombre de receta válido', 'error'); }
+    if (!numValido(porciones, { min: 1, max: 100000 })) { marcarError(document.getElementById('recetaPorciones')); return toast('Ingresa porciones válidas', 'error'); }
     if (!state.ingredientesTemp.length) return toast('Agrega al menos un ingrediente', 'error');
     const costos = {
         horas: 0,
@@ -236,7 +237,7 @@ export function editAgregarIngrediente() {
     const insumoId = document.getElementById('editIngInsumo').value;
     const cantidad = parseFloat(document.getElementById('editIngCantidad').value);
     const unidad   = document.getElementById('editIngUnidad').value;
-    if (!insumoId || !cantidad) return toast('Selecciona insumo e ingresa cantidad', 'error');
+    if (!insumoId || !numValido(cantidad, { min: 0.001 })) return toast('Selecciona insumo e ingresa una cantidad válida', 'error');
     if (state.editIngredientes.find(i => i.insumoId === insumoId)) return toast('Ingrediente ya en la receta', 'error');
     const ins = state.insumos.find(i => i.id === insumoId);
     state.editIngredientes.push({ insumoId, codigo: ins.codigo || '', nombre: ins.nombre, unidad, cantidad });
@@ -251,7 +252,8 @@ export function editQuitarIngrediente(idx) {
 export async function guardarEdicionReceta(id) {
     const nombre    = document.getElementById('editRecetaNombre').value.trim();
     const porciones = parseInt(document.getElementById('editRecetaPorciones').value) || 1;
-    if (!nombre)                        return toast('Ingresa el nombre de la receta', 'error');
+    if (!nombre || nombre.length > 200)             return toast('Ingresa un nombre de receta válido', 'error');
+    if (!numValido(porciones, { min: 1, max: 100000 })) return toast('Ingresa porciones válidas', 'error');
     if (!state.editIngredientes.length) return toast('Agrega al menos un ingrediente', 'error');
     await updateDoc(doc(db, 'recetas', id), { nombre, porciones, ingredientes: state.editIngredientes });
     const idx = state.recetas.findIndex(r => r.id === id);

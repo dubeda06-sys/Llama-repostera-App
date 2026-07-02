@@ -1,7 +1,7 @@
 // Compras: tabla, registro manual y núcleo compartido con el lector de boletas.
 import { db, collection, addDoc, deleteDoc, updateDoc, doc } from './firebase.js';
 import { state } from './state.js';
-import { esc, toast, confirmar, btnLoading, marcarError } from './util.js';
+import { esc, toast, confirmar, btnLoading, marcarError, numValido } from './util.js';
 import { FACTORS } from './units.js';
 import { actualizarContadores } from './render.js';
 import { renderInsumos } from './insumos.js';
@@ -63,8 +63,8 @@ export async function agregarCompra(btn) {
     const fecha    = document.getElementById('compraFecha').value;
     // marcar el primer campo faltante en vez de solo un toast seco
     if (!insumoId)  { marcarError(document.getElementById('compraInsumo'));  return toast('Elige el insumo comprado', 'error'); }
-    if (!cantidad)  { marcarError(document.getElementById('compraCantidad')); return toast('Ingresa la cantidad', 'error'); }
-    if (!precio)    { marcarError(document.getElementById('compraPrecio'));  return toast('Ingresa el precio pagado', 'error'); }
+    if (!numValido(cantidad, { min: 0.001 })) { marcarError(document.getElementById('compraCantidad')); return toast('Ingresa una cantidad válida', 'error'); }
+    if (!numValido(precio, { min: 0.01 }))    { marcarError(document.getElementById('compraPrecio'));  return toast('Ingresa un precio válido', 'error'); }
     if (!fecha)     { marcarError(document.getElementById('compraFecha'));   return toast('Elige la fecha de compra', 'error'); }
 
     const done = btnLoading(btn, 'Registrando…');

@@ -57,6 +57,11 @@ export function btnLoading(btn, texto = 'Guardando…') {
     return () => { btn.disabled = false; btn.innerHTML = prev; };
 }
 
+// valida un número finito dentro de rango antes de guardarlo en Firestore
+export function numValido(n, { min = 0, max = 1e9 } = {}) {
+    return typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
+}
+
 // marca visualmente un input con error y le da foco
 export function marcarError(el) {
     if (!el) return;

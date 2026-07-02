@@ -1,7 +1,7 @@
 // Preview editable de la boleta, overlay de carga con la llama y registro final en Firestore.
 import { db, collection, addDoc, updateDoc, doc } from '../firebase.js';
 import { state } from '../state.js';
-import { esc, toast, confirmar, hoyISO, btnLoading } from '../util.js';
+import { esc, toast, confirmar, hoyISO, btnLoading, numValido } from '../util.js';
 import { celebrar } from '../ui/llama.js';
 import { b } from './state.js';
 import { CONF_MIN, cuadreTol } from './config.js';
@@ -243,7 +243,7 @@ export async function aplicarBoleta(btn) {
     const nuevos = {}; // clave (ean|nombre) → id, evita duplicar creaciones
     let ok = 0;
     for (const r of b.parsed) {
-        if (!r.cantidad || !r.precio) continue;
+        if (!numValido(r.cantidad, { min: 0.001 }) || !numValido(r.precio, { min: 0.01 })) continue;
         const eanUse = (r.ean && r.eanOk) ? r.ean : null; // solo EAN válidos
         let insumoId = r.insumoId;
         if (!insumoId) {

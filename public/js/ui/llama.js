@@ -1,9 +1,9 @@
 // La llama mascota: globos de diálogo reusables para empty states, avisos y saludos.
 import { esc } from '../util.js';
 
-// bloque de llama con globo de diálogo. opts.cta = { texto, onclick } (onclick = string inline)
+// bloque de llama con globo de diálogo. opts.cta = { texto, onclick } (onclick = string inline, mensaje/texto = HTML literal del código, nunca datos de usuario)
 export function llamaHtml(mensaje, opts = {}) {
-    const cta = opts.cta ? `<button class="es-cta" onclick="${opts.cta.onclick}">${opts.cta.texto}</button>` : '';
+    const cta = opts.cta ? `<button class="es-cta" onclick="${esc(opts.cta.onclick)}">${esc(opts.cta.texto)}</button>` : '';
     return `<div class="llama-empty">
         <div class="le-bubble">${mensaje}</div>
         <img class="le-img" src="img/anim/loader/llama.png" alt="La llama repostera">

@@ -24,6 +24,12 @@
         "headers": [
           { "key": "Cache-Control", "value": "no-cache, max-age=0" }
         ]
+      },
+      {
+        "source": "**/*.html",
+        "headers": [
+          { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.jsdelivr.net https://www.google.com https://www.recaptcha.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://firebaseinstallations.googleapis.com https://content-firebaseappcheck.googleapis.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com; frame-src https://www.google.com https://recaptcha.google.com https://llama-repostera-app.firebaseapp.com; worker-src 'self' blob:; base-uri 'self'; form-action 'self'" }
+        ]
       }
     ]
   },
