@@ -112,7 +112,7 @@ function stickyBarHtml(suma) {
     const totalTxt = b.total ? ` / Boleta ${cur}${b.total.toLocaleString('es-CL')}` : '';
     const sel = b.parsed.filter(r => r._sel).length;
     return `<div class="boleta-sticky" id="boletaSticky">
-        <div class="bs-suma" id="bsSuma">Suma ${cur}${suma.toLocaleString('es-CL')}${totalTxt}</div>
+        <div class="bs-suma" id="bsSuma" aria-live="polite" aria-atomic="true">Suma ${cur}${suma.toLocaleString('es-CL')}${totalTxt}</div>
         ${sel ? `<button class="btn btn-danger btn-sm" onclick="boletaQuitarSel()">🗑 Quitar ${sel}</button>` : ''}
         <button class="btn btn-success" onclick="aplicarBoleta(this)">✓ Registrar ${b.parsed.length}</button>
     </div>`;
@@ -171,7 +171,7 @@ export function renderBoletaPreview() {
             <div class="bi-head">
                 <input type="checkbox" class="bi-check" ${r._sel ? 'checked' : ''} onchange="boletaSel(${i},this.checked)" title="Seleccionar" aria-label="Seleccionar producto">
                 <span class="bi-badge" title="${r.ean || 'sin código de barras'}">${badgeMatchBoleta(r)}</span>
-                <input class="bi-nombre" type="text" value="${esc(r.nombreRaw || '')}" oninput="boletaEdit(${i},'nombreRaw',this.value)" onchange="boletaRematch(${i})" placeholder="Producto">
+                <input class="bi-nombre" type="text" value="${esc(r.nombreRaw || '')}" oninput="boletaEdit(${i},'nombreRaw',this.value)" onchange="boletaRematch(${i})" placeholder="Producto" aria-label="Nombre del producto">
                 <button class="bi-del" onclick="boletaQuitar(${i})" title="Quitar producto">✕</button>
             </div>
             ${eanCorregidoHtml(r)}

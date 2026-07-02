@@ -293,6 +293,7 @@ export function toggleBarras() {
     const chev = document.getElementById('barrasChevron');
     const open = body.classList.toggle('open');
     chev.style.transform = open ? 'rotate(180deg)' : 'rotate(0)';
+    document.getElementById('barrasHeader')?.setAttribute('aria-expanded', String(open));
 }
 
 // feedback al escribir/escanear: ¿ya está ligado?

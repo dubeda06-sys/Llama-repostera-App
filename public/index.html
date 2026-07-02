@@ -93,7 +93,7 @@
 
             <!-- INSUMOS -->
             <div id="insumos" class="section">
-                <div class="section-title"><img class="st-icon" src="img/insumos.png" alt=""> Insumos</div>
+                <div class="section-title" tabindex="-1"><img class="st-icon" src="img/insumos.png" alt=""> Insumos</div>
 
                 <!-- Pestañas: Ver / Ingresar -->
                 <div class="ins-tabs">
@@ -107,6 +107,7 @@
                         <span class="search-icon">🔍</span>
                         <input type="text" class="search-input" id="filtrarInsumo"
                             placeholder="Filtrar mis insumos por nombre o código..."
+                            aria-label="Filtrar mis insumos por nombre o código"
                             oninput="renderInsumos()" autocomplete="off">
                     </div>
                     <div id="listaInsumos"><div class="spinner"></div></div>
@@ -118,6 +119,7 @@
                         <span class="search-icon">🔍</span>
                         <input type="text" class="search-input" id="buscarInsumo"
                             placeholder="Buscar ingrediente para agregar rápido..."
+                            aria-label="Buscar ingrediente para agregar rápido"
                             oninput="filtrarSugeridos(this.value)"
                             onfocus="mostrarSugeridos()"
                             autocomplete="off">
@@ -145,7 +147,7 @@
 
                     <!-- Módulo códigos de barra -->
                     <div class="barras-module">
-                        <div class="barras-header" onclick="toggleBarras()">
+                        <div class="barras-header" id="barrasHeader" onclick="toggleBarras()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleBarras();}" aria-expanded="false" aria-controls="barrasBody">
                             <span>🔖 Códigos de barra</span>
                             <span id="barrasChevron" style="transition:transform .2s;">▼</span>
                         </div>
@@ -179,7 +181,7 @@
 
             <!-- COMPRAS -->
             <div id="compras" class="section">
-                <div class="section-title"><img class="st-icon" src="img/compras.png" alt=""> Compras</div>
+                <div class="section-title" tabindex="-1"><img class="st-icon" src="img/compras.png" alt=""> Compras</div>
 
                 <div class="scanner-area">
                     <p style="margin-bottom:12px; color:#6c757d; font-size:14px;">Escanea tu boleta o ingresa manualmente</p>
@@ -227,11 +229,11 @@
 
             <!-- RECETAS -->
             <div id="recetas" class="section">
-                <div class="section-title"><img class="st-icon" src="img/recetas.png" alt=""> Recetas</div>
+                <div class="section-title" tabindex="-1"><img class="st-icon" src="img/recetas.png" alt=""> Recetas</div>
 
                 <!-- Importador de recetas -->
                 <div class="barras-module">
-                    <div class="barras-header" onclick="toggleImport()">
+                    <div class="barras-header" id="importHeader" onclick="toggleImport()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleImport();}" aria-expanded="false" aria-controls="importBody">
                         <span>📋 Importar receta desde texto</span>
                         <span id="importChevron" style="transition:transform .2s;">▼</span>
                     </div>
@@ -292,7 +294,7 @@
 
             <!-- CALCULADORA -->
             <div id="calculadora" class="section">
-                <div class="section-title"><img class="st-icon" src="img/calculadora.png" alt=""> Calculadora de Precio</div>
+                <div class="section-title" tabindex="-1"><img class="st-icon" src="img/calculadora.png" alt=""> Calculadora de Precio</div>
 
                 <div class="form-group">
                     <label>Receta</label>
@@ -343,7 +345,7 @@
 
             <!-- CONFIGURACIÓN -->
             <div id="configuracion" class="section">
-                <div class="section-title">⚙️ Configuración</div>
+                <div class="section-title" tabindex="-1">⚙️ Configuración</div>
 
                 <div class="config-group">
                     <h4>💱 Moneda</h4>

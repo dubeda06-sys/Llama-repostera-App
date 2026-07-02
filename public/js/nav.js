@@ -15,6 +15,8 @@ function mostrarSeccion(id) {
     if (id === 'calculadora') abrirRecetaEnCalc();
     mostrarHint(id);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    // mueve el foco al título de la sección (lectores de pantalla y navegación con teclado)
+    document.querySelector(`#${id} .section-title`)?.focus({ preventScroll: true });
 }
 
 function mostrarDashboard() {

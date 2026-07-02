@@ -22,17 +22,38 @@ export function toast(msg, tipo = 'ok') {
     }, 3200);
 }
 
-// modal de confirmación (async)
+// modal de confirmación (async) — con focus trap y restauración de foco al cerrar
 export function confirmar(msg) {
     return new Promise(resolve => {
         const overlay = document.getElementById('modalOverlay');
+        const cancelBtn = document.getElementById('modalCancel');
+        const okBtn = document.getElementById('modalConfirm');
+        const previoFoco = document.activeElement;
         document.getElementById('modalMsg').textContent = msg;
         overlay.classList.add('open');
-        const cancelar = () => { overlay.classList.remove('open'); resolve(false); };
-        const aceptar  = () => { overlay.classList.remove('open'); resolve(true);  };
-        document.getElementById('modalCancel').onclick  = cancelar;
-        document.getElementById('modalConfirm').onclick = aceptar;
+        cancelBtn.focus();
+
+        const cerrar = (valor) => {
+            overlay.classList.remove('open');
+            document.removeEventListener('keydown', onKeydown);
+            previoFoco?.focus?.();
+            resolve(valor);
+        };
+        const cancelar = () => cerrar(false);
+        const aceptar  = () => cerrar(true);
+
+        const onKeydown = e => {
+            if (e.key === 'Escape') { e.preventDefault(); cancelar(); return; }
+            if (e.key !== 'Tab') return;
+            // cicla el foco entre los 2 únicos botones del modal
+            e.preventDefault();
+            (document.activeElement === cancelBtn ? okBtn : cancelBtn).focus();
+        };
+
+        cancelBtn.onclick = cancelar;
+        okBtn.onclick = aceptar;
         overlay.onclick = e => { if (e.target === overlay) cancelar(); };
+        document.addEventListener('keydown', onKeydown);
     });
 }
 

@@ -403,6 +403,7 @@ export function toggleImport() {
     const chev = document.getElementById('importChevron');
     const open = body.classList.toggle('open');
     chev.style.transform = open ? 'rotate(180deg)' : 'rotate(0)';
+    document.getElementById('importHeader')?.setAttribute('aria-expanded', String(open));
 }
 
 export function limpiarImport() {

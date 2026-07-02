@@ -334,6 +334,8 @@ body {
     gap: 10px;
 }
 .section-title .st-icon { width: 36px; height: 36px; object-fit: contain; }
+.section-title:focus { outline: none; }
+.section-title:focus-visible { outline: 3px solid var(--c-primary); outline-offset: 2px; }
 
 /* Search bar */
 .search-wrapper { position: relative; margin-bottom: 20px; }
