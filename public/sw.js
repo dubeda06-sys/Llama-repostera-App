@@ -5,8 +5,8 @@
 //  - Imágenes/íconos/fuentes → cache-first (rápido y disponible offline).
 //  - Cross-origin (Firestore, gstatic, reCAPTCHA, Tesseract CDN) → NO se intercepta.
 // OJO: subir la versión al cambiar los assets precacheados (activate limpia los caches viejos)
-const CACHE_NAME = 'reposteria-v4';
-const PRECACHE = ['/', '/index.html', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/icon.svg'];
+const CACHE_NAME = 'reposteria-v5';
+const PRECACHE = ['/', '/index.html', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(PRECACHE)).catch(() => {}));
