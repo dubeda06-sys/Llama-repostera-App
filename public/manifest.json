@@ -30,6 +30,21 @@
       "type": "image/svg+xml"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "screenshots/dashboard.png",
+      "sizes": "1205x2680",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Inicio: insumos, compras, recetas y calculadora"
+    },
+    {
+      "src": "screenshots/compras.png",
+      "sizes": "1220x2712",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Compras registradas con resumen de gastos"
+    }
+  ],
   "categories": ["food", "productivity", "finance"]
 }
